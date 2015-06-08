@@ -33,6 +33,8 @@ enum token_type {
 	VALUE,
 	OP_ADD,
 	OP_SUB,
+	OP_MULT,
+	OP_DIV
 };
 
 // value will only be defined if type is VALUE
@@ -99,6 +101,11 @@ struct token *stack_pop(struct stack *stack)
 	}
 }
 
+int stack_is_empty(struct stack *stack)
+{
+	return stack->top == 0;
+}
+
 // str is a null terminated string of only digits
 // does not handle overflow!!!
 int parse_int(char *str)
@@ -127,6 +134,8 @@ struct token *pn_read_token(char **expr)
 		switch (*head) {
 			case '+': token->type = OP_ADD; head++; break;
 			case '-': token->type = OP_SUB; head++; break;
+			case '*': token->type = OP_MULT; head++; break;
+			case '/': token->type = OP_DIV; head++; break;
 			default:
 				if (isdigit(*head)) {
 					const int buf_size = 16;
@@ -189,6 +198,108 @@ struct stack *pn_parse(char *expr)
 	return stack;
 }
 
+
+int pn_stack_eval(struct stack *stack, int *result)
+{
+	int lval = 0;
+	int rval = 0;
+	int lval_set = 0;
+	int rval_set = 0;
+
+	while (!stack_is_empty(stack)) {
+		struct token *token = stack_pop(stack);
+
+		switch (token->type) {
+			case VALUE:
+				if (lval_set) {
+					if (rval_set) {
+						fputs("Too many values\n", stderr);
+
+						return 0;
+					}
+					else {
+						rval = token->value;
+						rval_set = 1;
+					}
+				}
+				else {
+					lval = token->value;
+					lval_set = 1;
+				}
+				break;
+
+			case OP_ADD:
+				if (lval_set && rval_set) {
+					lval += rval;
+					rval_set = 0;
+				}
+				else {
+					fputs("Too few values for add\n", stderr);
+
+					return 0;
+				}
+				break;
+
+			case OP_SUB:
+				if (lval_set) {
+					if (rval_set) {
+						lval -= rval;
+						rval_set = 0;
+					}
+					else {
+						lval = -lval;
+					}
+				}
+				else {
+					fputs("No value to subtract\n", stderr);
+
+					return 0;
+				}
+				break;
+
+			case OP_MULT:
+				if (lval_set && rval_set) {
+					lval *= rval;
+					rval_set = 0;
+				}
+				else {
+					fputs("Too few values to multiply\n", stderr);
+
+					return 0;
+				}
+				break;
+
+			case OP_DIV:
+				if (lval_set && rval_set) {
+					lval /= rval;
+					rval_set = 0;
+				}
+				else {
+					fputs("Too few values to divide\n", stderr);
+
+					return 0;
+				}
+				break;
+
+			default:
+				fprintf(stderr, "Uknown token type %d\n", token->type);
+
+				return 0;
+		}
+	}
+
+	if (!lval_set || rval_set) {
+		fputs("Invalid expression\n", stderr);
+
+		return 0;
+	}
+	else {
+		*result = lval;
+
+		return 1;
+	}
+}
+
 int main(int argc, char **argv)
 {
 	char str[1024];
@@ -203,20 +314,14 @@ int main(int argc, char **argv)
 
 	struct stack *stack = pn_parse(str);
 
-	if (stack) {
-		struct token *token = NULL;
-		puts("Stack contents:");
+	int result = 0;
 
-		while (NULL != (token = stack_pop(stack))) {
-			printf("Type: %d, value %d\n", token->type, token->value);
-			free(token);
-		}
+	if (pn_stack_eval(stack, &result)) {
+		printf("Expression value: %d\n", result);
 
 		return 0;
 	}
 	else {
-		fputs("NULL stack\n", stderr);
-
 		return 1;
 	}
 }
