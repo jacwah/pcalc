@@ -1,0 +1,5 @@
+pcalc
+*.o
+.DS_Store
+.project
+
