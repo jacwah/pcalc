@@ -49,6 +49,20 @@ struct stack {
 	size_t top;
 };
 
+struct token *token_new(enum token_type type, int value)
+{
+	struct token *token = malloc(sizeof(*token));
+
+	if (token == NULL) {
+		return NULL;
+	}
+	else {
+		token->type = type;
+		token->value = value;
+		return token;
+	}
+}
+
 void stack_init(struct stack *stack, size_t size)
 {
 	stack->array = calloc(size, sizeof(*stack->array));
@@ -199,39 +213,27 @@ struct stack *pn_parse(char *expr)
 }
 
 
-int pn_stack_eval(struct stack *stack, int *result)
+int pn_stack_eval(struct stack *t_stack, int *result)
 {
-	int lval = 0;
-	int rval = 0;
-	int lval_set = 0;
-	int rval_set = 0;
+	struct stack *v_stack = stack_new(STACK_SIZE);
 
-	while (!stack_is_empty(stack)) {
-		struct token *token = stack_pop(stack);
+	while (!stack_is_empty(t_stack)) {
+		struct token *token = stack_pop(t_stack);
 
 		switch (token->type) {
 			case VALUE:
-				if (lval_set) {
-					if (rval_set) {
-						fputs("Too many values\n", stderr);
-
-						return 0;
-					}
-					else {
-						rval = token->value;
-						rval_set = 1;
-					}
-				}
-				else {
-					lval = token->value;
-					lval_set = 1;
-				}
+				stack_push(v_stack, token);
 				break;
 
 			case OP_ADD:
-				if (lval_set && rval_set) {
-					lval += rval;
-					rval_set = 0;
+			{
+				struct token *lval = stack_pop(v_stack);
+				struct token *rval = stack_pop(v_stack);
+
+				if (rval && lval) {
+					int result = lval->value + rval->value;
+					struct token *newtoken = token_new(VALUE, result);
+					stack_push(v_stack, newtoken);
 				}
 				else {
 					fputs("Too few values for add\n", stderr);
@@ -239,16 +241,17 @@ int pn_stack_eval(struct stack *stack, int *result)
 					return 0;
 				}
 				break;
+			}
 
 			case OP_SUB:
-				if (lval_set) {
-					if (rval_set) {
-						lval -= rval;
-						rval_set = 0;
-					}
-					else {
-						lval = -lval;
-					}
+			{
+				struct token *lval = stack_pop(v_stack);
+				struct token *rval = stack_pop(v_stack);
+
+				if (rval && lval) {
+					int result = lval->value - rval->value;
+					struct token *newtoken = token_new(VALUE, result);
+					stack_push(v_stack, newtoken);
 				}
 				else {
 					fputs("No value to subtract\n", stderr);
@@ -256,11 +259,17 @@ int pn_stack_eval(struct stack *stack, int *result)
 					return 0;
 				}
 				break;
+			}
 
 			case OP_MULT:
-				if (lval_set && rval_set) {
-					lval *= rval;
-					rval_set = 0;
+			{
+				struct token *lval = stack_pop(v_stack);
+				struct token *rval = stack_pop(v_stack);
+
+				if (rval && lval) {
+					int result = lval->value * rval->value;
+					struct token *newtoken = token_new(VALUE, result);
+					stack_push(v_stack, newtoken);
 				}
 				else {
 					fputs("Too few values to multiply\n", stderr);
@@ -268,11 +277,17 @@ int pn_stack_eval(struct stack *stack, int *result)
 					return 0;
 				}
 				break;
+			}
 
 			case OP_DIV:
-				if (lval_set && rval_set) {
-					lval /= rval;
-					rval_set = 0;
+			{
+				struct token *lval = stack_pop(v_stack);
+				struct token *rval = stack_pop(v_stack);
+
+				if (rval && lval) {
+					int result = lval->value / rval->value;
+					struct token *newtoken = token_new(VALUE, result);
+					stack_push(v_stack, newtoken);
 				}
 				else {
 					fputs("Too few values to divide\n", stderr);
@@ -280,6 +295,7 @@ int pn_stack_eval(struct stack *stack, int *result)
 					return 0;
 				}
 				break;
+			}
 
 			default:
 				fprintf(stderr, "Uknown token type %d\n", token->type);
@@ -288,15 +304,15 @@ int pn_stack_eval(struct stack *stack, int *result)
 		}
 	}
 
-	if (!lval_set || rval_set) {
-		fputs("Invalid expression\n", stderr);
-
-		return 0;
+	if (v_stack->top == 1) {
+		struct token *token = stack_pop(v_stack);
+		*result = token->value;
+		free(token);
+		return 1;
 	}
 	else {
-		*result = lval;
-
-		return 1;
+		fputs("Invalid expression\n", stderr);
+		exit(1);
 	}
 }
 
