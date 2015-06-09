@@ -7,6 +7,7 @@
 //
 
 #include <stdlib.h>
+#include <assert.h>
 #include "stack.h"
 
 void stack_init(struct stack *stack, size_t size)
@@ -30,14 +31,11 @@ struct stack *stack_new(size_t size)
 
 void stack_free(struct stack *stack)
 {
-	for (int i = 0; i < stack->top; i++) {
-		free(stack->array[i]);
-	}
 	free(stack->array);
 	free(stack);
 }
 
-int stack_push(struct stack *stack, struct token *value)
+int stack_push(struct stack *stack, int value)
 {
 	if (stack->top < stack->size) {
 		stack->array[stack->top++] = value;
@@ -48,20 +46,23 @@ int stack_push(struct stack *stack, struct token *value)
 	}
 }
 
-struct token *stack_pop(struct stack *stack)
+// Can only call if stack is not empty
+int stack_pop(struct stack *stack)
 {
-	if (stack->top == 0) {
-		return NULL;
-	}
-	else {
-		struct token *token = stack->array[stack->top - 1];
-		stack->array[stack->top - 1] = NULL;
-		stack->top--;
-		return token;
-	}
+	assert(stack->top != 0);
+
+	int value = stack->array[stack->top - 1];
+	stack->array[stack->top - 1] = 0;
+	stack->top--;
+	return value;
 }
 
 int stack_is_empty(struct stack *stack)
 {
 	return stack->top == 0;
+}
+
+int stack_size(struct stack *stack)
+{
+	return stack->top;
 }

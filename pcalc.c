@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
+#include <assert.h>
 #include "pcalc.h"
 #include "stack.h"
 
@@ -146,6 +147,27 @@ struct token **pn_parse(char *expr)
 	return prog;
 }
 
+int pn_eval_binary_op(struct stack *v_stack, enum token_type type)
+{
+	if (stack_size(v_stack) >= 2) {
+		int lval = stack_pop(v_stack);
+		int rval = stack_pop(v_stack);
+		int result = 0;
+
+		switch (type) {
+			case OP_ADD: result = lval + rval; break;
+			case OP_SUB: result = lval - rval; break;
+			case OP_MULT:result = lval * rval; break;
+			case OP_DIV: result = lval / rval; break;
+			default: assert(0);
+		}
+		stack_push(v_stack, result);
+		return 1;
+	}
+	else {
+		return 0;
+	}
+}
 
 int pn_eval(struct token **program, int *result)
 {
@@ -156,80 +178,18 @@ int pn_eval(struct token **program, int *result)
 
 		switch (token->type) {
 			case VALUE:
-				stack_push(v_stack, token);
+				stack_push(v_stack, token->value);
 				break;
 
 			case OP_ADD:
-			{
-				struct token *lval = stack_pop(v_stack);
-				struct token *rval = stack_pop(v_stack);
-
-				if (rval && lval) {
-					int result = lval->value + rval->value;
-					struct token *newtoken = token_new(VALUE, result);
-					stack_push(v_stack, newtoken);
-				}
-				else {
-					fputs("Too few values for add\n", stderr);
-
-					return 0;
-				}
-				break;
-			}
-
 			case OP_SUB:
-			{
-				struct token *lval = stack_pop(v_stack);
-				struct token *rval = stack_pop(v_stack);
-
-				if (rval && lval) {
-					int result = lval->value - rval->value;
-					struct token *newtoken = token_new(VALUE, result);
-					stack_push(v_stack, newtoken);
-				}
-				else {
-					fputs("No value to subtract\n", stderr);
-
-					return 0;
-				}
-				break;
-			}
-
 			case OP_MULT:
-			{
-				struct token *lval = stack_pop(v_stack);
-				struct token *rval = stack_pop(v_stack);
-
-				if (rval && lval) {
-					int result = lval->value * rval->value;
-					struct token *newtoken = token_new(VALUE, result);
-					stack_push(v_stack, newtoken);
-				}
-				else {
-					fputs("Too few values to multiply\n", stderr);
-
-					return 0;
-				}
-				break;
-			}
-
 			case OP_DIV:
-			{
-				struct token *lval = stack_pop(v_stack);
-				struct token *rval = stack_pop(v_stack);
-
-				if (rval && lval) {
-					int result = lval->value / rval->value;
-					struct token *newtoken = token_new(VALUE, result);
-					stack_push(v_stack, newtoken);
-				}
-				else {
-					fputs("Too few values to divide\n", stderr);
-
-					return 0;
+				if (!pn_eval_binary_op(v_stack, token->type)) {
+					fputs("Too few value for binary operator\n", stderr);
+					exit(1);
 				}
 				break;
-			}
 
 			default:
 				fprintf(stderr, "Uknown token type %d\n", token->type);
@@ -238,10 +198,8 @@ int pn_eval(struct token **program, int *result)
 		}
 	}
 
-	if (v_stack->top == 1) {
-		struct token *token = stack_pop(v_stack);
-		*result = token->value;
-		free(token);
+	if (stack_size(v_stack) == 1) {
+		*result = stack_pop(v_stack);
 		return 1;
 	}
 	else {
