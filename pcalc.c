@@ -10,6 +10,8 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
+#include "pcalc.h"
+#include "stack.h"
 
 #define STACK_SIZE 32
 
@@ -28,27 +30,6 @@ int ipow(int base, int exp)
 	return result;
 }
 
-enum token_type {
-	NONE,
-	VALUE,
-	OP_ADD,
-	OP_SUB,
-	OP_MULT,
-	OP_DIV
-};
-
-// value will only be defined if type is VALUE
-struct token {
-	enum token_type type;
-	int value;
-};
-
-struct stack {
-	struct token **array;
-	size_t size;
-	size_t top;
-};
-
 struct token *token_new(enum token_type type, int value)
 {
 	struct token *token = malloc(sizeof(*token));
@@ -61,63 +42,6 @@ struct token *token_new(enum token_type type, int value)
 		token->value = value;
 		return token;
 	}
-}
-
-void stack_init(struct stack *stack, size_t size)
-{
-	stack->array = calloc(size, sizeof(*stack->array));
-	stack->size = size;
-	stack->top = 0;
-}
-
-struct stack *stack_new(size_t size)
-{
-	struct stack *stack = malloc(sizeof(struct stack));
-	if (stack == NULL) {
-		return NULL;
-	}
-	else {
-		stack_init(stack, size);
-		return stack;
-	}
-}
-
-void stack_free(struct stack *stack)
-{
-	for (int i = 0; i < stack->top; i++) {
-		free(stack->array[i]);
-	}
-	free(stack->array);
-	free(stack);
-}
-
-int stack_push(struct stack *stack, struct token *value)
-{
-	if (stack->top < stack->size) {
-		stack->array[stack->top++] = value;
-		return 1;
-	}
-	else {
-		return 0;
-	}
-}
-
-struct token *stack_pop(struct stack *stack)
-{
-	if (stack->top == 0) {
-		return NULL;
-	}
-	else {
-		struct token *token = stack->array[stack->top - 1];
-		stack->array[stack->top - 1] = NULL;
-		stack->top--;
-		return token;
-	}
-}
-
-int stack_is_empty(struct stack *stack)
-{
-	return stack->top == 0;
 }
 
 // str is a null terminated string of only digits

@@ -3,8 +3,8 @@
 TARGET=pcalc
 CC=gcc
 CFLAGS=-g -Wall
-DEPS=
-OBJ=pcalc.o
+DEPS=pcalc.h stack.h
+OBJ=pcalc.o stack.o
 
 .PHONY: default all clean
 
