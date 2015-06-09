@@ -13,7 +13,7 @@
 #include "pcalc.h"
 #include "stack.h"
 
-#define STACK_SIZE 32
+#define MAX_TOKENS 32
 
 // Only positive exponents
 int ipow(int base, int exp)
@@ -107,9 +107,12 @@ struct token *pn_read_token(char **expr)
 }
 
 // Parse a string Polish Notation expression
-struct stack *pn_parse(char *expr)
+struct token **pn_parse(char *expr)
 {
-	struct stack *stack = stack_new(STACK_SIZE);
+	// Will be NULL terminated if not full
+	struct token **prog = calloc(MAX_TOKENS, sizeof(*prog));
+	struct token *prog_reverse[MAX_TOKENS];
+	int end = 0;
 	char *expr_base = expr;
 
 	while (isspace(*expr))
@@ -119,8 +122,11 @@ struct stack *pn_parse(char *expr)
 		struct token *token = pn_read_token(&expr);
 
 		if (token) {
-			if (!stack_push(stack, token)) {
-				fputs("Stack size too small\n", stderr);
+			if (end < MAX_TOKENS) {
+				prog_reverse[end++] = token;
+			}
+			else {
+				fputs("Too many tokens\n", stderr);
 				exit(1);
 			}
 		}
@@ -133,16 +139,20 @@ struct stack *pn_parse(char *expr)
 			expr++;
 	}
 
-	return stack;
+	for (int i = 0; i < end; i++) {
+		prog[i] = prog_reverse[end - i - 1];
+	}
+
+	return prog;
 }
 
 
-int pn_stack_eval(struct stack *t_stack, int *result)
+int pn_eval(struct token **program, int *result)
 {
-	struct stack *v_stack = stack_new(STACK_SIZE);
+	struct stack *v_stack = stack_new(MAX_TOKENS);
 
-	while (!stack_is_empty(t_stack)) {
-		struct token *token = stack_pop(t_stack);
+	for (int i = 0; i < MAX_TOKENS && program[i] != NULL; i++) {
+		struct token *token = program[i];
 
 		switch (token->type) {
 			case VALUE:
@@ -252,11 +262,11 @@ int main(int argc, char **argv)
 
 	puts(str);
 
-	struct stack *stack = pn_parse(str);
+	struct token **program = pn_parse(str);
 
 	int result = 0;
 
-	if (pn_stack_eval(stack, &result)) {
+	if (pn_eval(program, &result)) {
 		printf("Expression value: %d\n", result);
 
 		return 0;
