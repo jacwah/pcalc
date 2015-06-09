@@ -11,7 +11,7 @@
 #include <ctype.h>
 #include <string.h>
 
-#define STACK_SIZE 8
+#define STACK_SIZE 32
 
 // Only positive exponents
 int ipow(int base, int exp)
