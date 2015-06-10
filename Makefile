@@ -1,4 +1,5 @@
 # Makefile for pcalc
+# Copyright 2015 Jacob Wahlgren
 
 TARGET=pcalc
 CC=gcc

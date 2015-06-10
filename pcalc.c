@@ -2,7 +2,7 @@
 //  pcalc.c
 //  
 //
-//  Created by Jacob Wahlgren on 2015-06-08.
+//  Copyright 2015 Jacob Wahlgren
 //
 //
 

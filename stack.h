@@ -2,7 +2,7 @@
 //  stack.h
 //  
 //
-//  Created by Jacob Wahlgren on 2015-06-09.
+//  Copyright 2015 Jacob Wahlgren
 //
 //
 
