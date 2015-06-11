@@ -35,15 +35,11 @@ void stack_free(struct stack *stack)
 	free(stack);
 }
 
-int stack_push(struct stack *stack, int value)
+// Can only call if stack is not full
+void stack_push(struct stack *stack, int value)
 {
-	if (stack->top < stack->size) {
-		stack->array[stack->top++] = value;
-		return 1;
-	}
-	else {
-		return 0;
-	}
+	assert(stack->top < stack->size);
+	stack->array[stack->top++] = value;
 }
 
 // Can only call if stack is not empty
@@ -60,6 +56,11 @@ int stack_pop(struct stack *stack)
 int stack_is_empty(struct stack *stack)
 {
 	return stack->top == 0;
+}
+
+int stack_is_full(struct stack *stack)
+{
+	return stack->top >= stack->size;
 }
 
 int stack_size(struct stack *stack)

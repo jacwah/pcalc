@@ -18,9 +18,10 @@ struct stack {
 void stack_init(struct stack *stack, size_t size);
 struct stack *stack_new(size_t size);
 void stack_free(struct stack *stack);
-int stack_push(struct stack *stack, int value);
+void stack_push(struct stack *stack, int value);
 int stack_pop(struct stack *stack);
 int stack_is_empty(struct stack *stack);
+int stack_is_full(struct stack *stack);
 int stack_size(struct stack *stack);
 
 #endif
