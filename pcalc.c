@@ -60,80 +60,81 @@ int parse_int(char *str)
 }
 
 // Read the first token in expr and advance it to point at the first character
-// after the read token
-struct token *pn_read_token(char **expr)
+// after the read token. Token parameter must be allocated memory.
+enum retcode pn_read_token(struct token *token, char **expr)
 {
-	struct token *token = malloc(sizeof(struct token));
+	char *head = *expr;
 
-	if (token == NULL)
-		return NULL;
-	else {
-		char *head = *expr;
+	switch (*head) {
+		case '+': token->type = OP_ADD; head++; break;
+		case '-': token->type = OP_SUB; head++; break;
+		case '*': token->type = OP_MULT; head++; break;
+		case '/': token->type = OP_DIV; head++; break;
+		default:
+			if (isdigit(*head)) {
+				const int buf_size = 16;
+				char buf[buf_size];
 
-		switch (*head) {
-			case '+': token->type = OP_ADD; head++; break;
-			case '-': token->type = OP_SUB; head++; break;
-			case '*': token->type = OP_MULT; head++; break;
-			case '/': token->type = OP_DIV; head++; break;
-			default:
-				if (isdigit(*head)) {
-					const int buf_size = 16;
-					char buf[buf_size];
+				// buf will always be zero terminated
+				memset(buf, 0, sizeof(buf));
 
-					// buf will always be zero terminated
-					memset(buf, 0, sizeof(buf));
-
-					for (int i = 0; i + 1 < buf_size && isdigit(*head); i++) {
-						buf[i] = *head++;
-					}
-
-					token->type = VALUE;
-					token->value = parse_int(buf);
+				for (int i = 0; i + 1 < buf_size && isdigit(*head); i++) {
+					buf[i] = *head++;
 				}
-				else {
-					token->type = NONE;
-				}
-		}
 
+				token->type = VALUE;
+				token->value = parse_int(buf);
+			}
+			else {
+				return R_UKNOWN_TOKEN;
+			}
+	}
+
+	if (isspace(*head) || *head == '\0') {
 		*expr = head;
-
-		if ((isspace(*head) || *head == '\0') && token->type != NONE) {
-			return token;
-		}
-		else {
-			free(token);
-			return NULL;
-		}
+		return R_OK;
+	}
+	else {
+		return R_UKNOWN_TOKEN;
 	}
 }
 
 // Parse a string Polish Notation expression
-struct token **pn_parse(char *expr)
+enum retcode pn_parse(struct token ***out, char *expr)
 {
 	// Will be NULL terminated if not full
 	struct token **prog = calloc(MAX_TOKENS, sizeof(*prog));
 	struct token *prog_reverse[MAX_TOKENS];
 	int end = 0;
-	char *expr_base = expr;
+
+	if (prog == NULL) {
+		return R_MEMORY_ALLOC;
+	}
 
 	while (isspace(*expr))
 		expr++;
 
 	while (*expr != '\0') {
-		struct token *token = pn_read_token(&expr);
+		struct token *token = malloc(sizeof(token));
 
-		if (token) {
+		if (token == NULL) {
+			free(prog);
+			return R_MEMORY_ALLOC;
+		}
+
+		enum retcode ret = pn_read_token(token, &expr);
+
+		if (ret == R_OK) {
 			if (end < MAX_TOKENS) {
 				prog_reverse[end++] = token;
 			}
 			else {
-				fputs("Too many tokens\n", stderr);
-				exit(1);
+				free(prog);
+				return R_OUT_OF_BOUNDS;
 			}
 		}
-		else {
-			fprintf(stderr, "Invalid token at index %ld\n", expr - expr_base);
-			exit(1);
+		else if (ret == R_UKNOWN_TOKEN){
+			return R_UKNOWN_TOKEN;
 		}
 
 		while (isspace(*expr))
@@ -143,11 +144,12 @@ struct token **pn_parse(char *expr)
 	for (int i = 0; i < end; i++) {
 		prog[i] = prog_reverse[end - i - 1];
 	}
+	*out = prog;
 
-	return prog;
+	return R_OK;
 }
 
-int pn_eval_binary_op(struct stack *v_stack, enum token_type type)
+enum retcode pn_eval_binary_op(struct stack *v_stack, enum token_type type)
 {
 	if (stack_size(v_stack) >= 2) {
 		int lval = stack_pop(v_stack);
@@ -162,14 +164,14 @@ int pn_eval_binary_op(struct stack *v_stack, enum token_type type)
 			default: assert(0);
 		}
 		stack_push(v_stack, result);
-		return 1;
+		return R_OK;
 	}
 	else {
-		return 0;
+		return R_NOT_ENOUGH_VALUES;
 	}
 }
 
-int pn_eval(struct token **program, int *result)
+enum retcode pn_eval(struct token **program, int *result)
 {
 	struct stack *v_stack = stack_new(MAX_TOKENS);
 
@@ -185,26 +187,23 @@ int pn_eval(struct token **program, int *result)
 			case OP_SUB:
 			case OP_MULT:
 			case OP_DIV:
-				if (!pn_eval_binary_op(v_stack, token->type)) {
-					fputs("Too few value for binary operator\n", stderr);
-					exit(1);
+				if (pn_eval_binary_op(v_stack, token->type) ==
+						R_NOT_ENOUGH_VALUES) {
+					return R_INVALID_EXPRESSION;
 				}
 				break;
 
 			default:
-				fprintf(stderr, "Uknown token type %d\n", token->type);
-
-				return 0;
+				assert(0);
 		}
 	}
 
 	if (stack_size(v_stack) == 1) {
 		*result = stack_pop(v_stack);
-		return 1;
+		return R_OK;
 	}
 	else {
-		fputs("Invalid expression\n", stderr);
-		exit(1);
+		return R_INVALID_EXPRESSION;
 	}
 }
 
@@ -220,16 +219,35 @@ int main(int argc, char **argv)
 
 	puts(str);
 
-	struct token **program = pn_parse(str);
+	struct token **program;
+	enum retcode ret_p = pn_parse(&program, str);
 
-	int result = 0;
+	if (ret_p == R_OK) {
+		int result = 0;
+		enum retcode ret_e = pn_eval(program, &result);
 
-	if (pn_eval(program, &result)) {
-		printf("Expression value: %d\n", result);
+		if (ret_e == R_OK) {
+			printf("Expression value: %d\n", result);
 
-		return 0;
+			return EXIT_SUCCESS;
+		}
+		else {
+			fputs("Invalid expression\n", stderr);
+			return EXIT_FAILURE;
+		}
 	}
 	else {
-		return 1;
+		char *str = NULL;
+		if (ret_p == R_OUT_OF_BOUNDS) {
+			str = "Too many tokens\n";
+		}
+		else if (ret_p == R_UKNOWN_TOKEN) {
+			str = "Uknown token in expression\n";
+		}
+		else if (ret_p == R_MEMORY_ALLOC) {
+			str = "Memory allocation failed\n";
+		}
+		fputs(str, stderr);
+		return EXIT_FAILURE;
 	}
 }

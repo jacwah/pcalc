@@ -9,6 +9,15 @@
 #ifndef PCALC_H
 #define PCALC_H
 
+enum retcode {
+	R_OK,
+	R_MEMORY_ALLOC,
+	R_OUT_OF_BOUNDS,
+	R_NOT_ENOUGH_VALUES,
+	R_UKNOWN_TOKEN,
+	R_INVALID_EXPRESSION
+};
+
 enum token_type {
 	NONE,
 	VALUE,
