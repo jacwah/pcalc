@@ -31,20 +31,6 @@ int ipow(int base, int exp)
 	return result;
 }
 
-struct token *token_new(enum token_type type, int value)
-{
-	struct token *token = malloc(sizeof(*token));
-
-	if (token == NULL) {
-		return NULL;
-	}
-	else {
-		token->type = type;
-		token->value = value;
-		return token;
-	}
-}
-
 // str is a null terminated string of only digits
 // does not handle overflow!!!
 int parse_int(char *str)
