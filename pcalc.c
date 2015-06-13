@@ -14,7 +14,7 @@
 #include "pcalc.h"
 #include "stack.h"
 
-#define MAX_TOKENS 32
+#define MIN_STACK_SIZE 16
 
 // Only positive exponents
 int ipow(int base, int exp)
@@ -154,7 +154,7 @@ enum retcode pn_eval_binary_op(struct stack *v_stack, enum token_type type)
 // Parse and evaluate a string Polish Notation expression
 enum retcode pn_eval_str(int *result, char *expr)
 {
-	struct stack *v_stack = stack_new(MAX_TOKENS);
+	struct stack *v_stack = stack_new(MIN_STACK_SIZE);
 	char *walk = expr + strlen(expr) - 1;
 
 	if (v_stack == NULL) {
