@@ -46,7 +46,8 @@ enum retcode stack_push(struct stack *stack, int value)
 {
 	if (stack->top == stack->size) {
 		stack->size *= 2;
-		stack->array = realloc(stack->array, stack->size);
+		stack->array = realloc(stack->array,
+							   stack->size * sizeof(*stack->array));
 
 		if (stack->array == NULL) {
 			return R_MEMORY_ALLOC;
