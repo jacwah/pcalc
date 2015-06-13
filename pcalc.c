@@ -93,48 +93,6 @@ int parse_int(char *str)
 	return value;
 }
 
-// Return NULL if a) memory alloc fails or b) eof was encountered before any
-// characters were read
-char *read_line(FILE *file)
-{
-	size_t size = 16;
-	size_t len = 0;
-	char *line = malloc(size);
-
-	if (line == NULL)
-		return NULL;
-
-	for(;;) {
-		int c;
-
-		switch (c = fgetc(file)) {
-			case EOF:
-				if (len == 0) {
-					free(line);
-					return NULL;
-				}
-				else {
-					line[len+1] = '\0';
-					return line;
-				}
-
-			case '\n':
-				line[len+1] = '\0';
-				return line;
-
-			default:
-				line[len++] = c;
-		}
-
-		if (len + 1 >= size) {
-			size *= 2;
-			line = realloc(line, size);
-			if (line == NULL)
-				return NULL;
-		}
-	}
-}
-
 // Read the first token in expr. Token parameter must be allocated memory.
 enum retcode pn_read_token(struct token *token, char *expr)
 {
@@ -317,16 +275,16 @@ int prompt_loop()
 	fprintf(stderr, "Type 'q' or 'quit' to exit\n");
 	for (;;) {
 		char *expr;
+		size_t len;
 
 		printf("pcalc> ");
-		expr = read_line(stdin);
 
-		if (expr != NULL) {
-			if (strcmp(expr, "q") == 0 || strcmp(expr, "quit") == 0) {
-				return EXIT_SUCCESS;
-			}
-			else if (expr[0] == '\0') {
+		if (getline(&expr, &len, stdin) > 0) {
+			if (expr[0] == '\n') {
 				continue;
+			}
+			else if (strcmp(expr, "q\n") == 0 || strcmp(expr, "quit\n") == 0) {
+				return EXIT_SUCCESS;
 			}
 			else {
 				int result;
@@ -353,7 +311,7 @@ int prompt_loop()
 			}
 		}
 		else {
-			fprintf(stderr, "Reading input failed\n");
+			perror("Reading input failed");
 			return EXIT_FAILURE;
 		}
 	}
