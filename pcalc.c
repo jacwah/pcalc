@@ -11,10 +11,58 @@
 #include <ctype.h>
 #include <string.h>
 #include <assert.h>
+#include <limits.h>
 #include "pcalc.h"
 #include "stack.h"
 
 #define MIN_STACK_SIZE 16
+
+int is_undefined_add(int a, int b)
+{
+	return (a > 0 && b > INT_MAX - a) ||
+		   (a < 0 && b < INT_MAX - a);
+}
+
+int is_undefined_sub(int a, int b)
+{
+	return (b > 0 && a < INT_MAX + b) ||
+		   (b < 0 && a > INT_MAX + b);
+}
+
+int is_undefined_mult(int a, int b)
+{
+	if (a > 0) {
+		if (b > 0) {
+			if (a > INT_MAX / b) {
+				return 1;
+			}
+		}
+		else {
+			if (b < INT_MIN / a) {
+				return 1;
+			}
+		}
+	}
+	else {
+		if (b > 0) {
+			if (a < INT_MIN / b) {
+				return 1;
+			}
+		}
+		else {
+			if (a != 0 && b < INT_MAX / a) {
+				return 1;
+			}
+		}
+	}
+
+	return 0;
+}
+
+int is_undefined_div(int a, int b)
+{
+	return b == 0 || (a == INT_MIN && b == -1);
+}
 
 // Only positive exponents
 int ipow(int base, int exp)
@@ -133,12 +181,45 @@ enum retcode pn_eval_binary_op(struct stack *v_stack, enum token_type type)
 		int result = 0;
 
 		switch (type) {
-			case OP_ADD: result = lval + rval; break;
-			case OP_SUB: result = lval - rval; break;
-			case OP_MULT:result = lval * rval; break;
-			case OP_DIV: result = lval / rval; break;
+			case OP_ADD:
+				if (is_undefined_add(lval, rval)) {
+					return R_OUT_OF_BOUNDS;
+				}
+				else {
+					result = lval + rval;
+				}
+				break;
+
+			case OP_SUB:
+				if (is_undefined_sub(lval, rval)) {
+					return R_OUT_OF_BOUNDS;
+				}
+				else {
+					result = lval - rval;
+				}
+				break;
+
+			case OP_MULT:
+				if (is_undefined_mult(lval, rval)) {
+					return R_OUT_OF_BOUNDS;
+				}
+				else {
+					result = lval * rval;
+				}
+				break;
+
+			case OP_DIV:
+				if (is_undefined_div(lval, rval)) {
+					return R_OUT_OF_BOUNDS;
+				}
+				else {
+					result = lval / rval;
+				}
+				break;
+
 			default: assert(0);
 		}
+
 		if (stack_push(v_stack, result) == R_MEMORY_ALLOC) {
 			return R_MEMORY_ALLOC;
 		}
@@ -192,6 +273,12 @@ enum retcode pn_eval_str(int *result, char *expr)
 					}
 					else if (ret == R_MEMORY_ALLOC) {
 						return R_MEMORY_ALLOC;
+					}
+					else if (ret == R_OUT_OF_BOUNDS) {
+						return R_OUT_OF_BOUNDS;
+					}
+					else if (ret != R_OK){
+						assert(0);
 					}
 				}
 					break;
@@ -257,6 +344,9 @@ int prompt_loop()
 				else if (ret == R_MEMORY_ALLOC) {
 					fprintf(stderr, "Memory allocation failed\n");
 				}
+				else if (ret == R_OUT_OF_BOUNDS) {
+					fprintf(stderr, "Result out of bounds\n");
+				}
 				else {
 					assert(0);
 				}
@@ -302,6 +392,10 @@ int main(int argc, char **argv)
 		}
 		else if (ret == R_MEMORY_ALLOC) {
 			fputs("Memory allocation failed\n", stderr);
+			return EXIT_FAILURE;
+		}
+		else if (ret == R_OUT_OF_BOUNDS) {
+			fprintf(stderr, "Result out of bounds\n");
 			return EXIT_FAILURE;
 		}
 	}
