@@ -25,7 +25,13 @@ struct stack *stack_new(size_t size)
 	}
 	else {
 		stack_init(stack, size);
-		return stack;
+		if (stack->array == NULL) {
+			free(stack);
+			return NULL;
+		}
+		else {
+			return stack;
+		}
 	}
 }
 
