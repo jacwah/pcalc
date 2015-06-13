@@ -139,8 +139,12 @@ enum retcode pn_eval_binary_op(struct stack *v_stack, enum token_type type)
 			case OP_DIV: result = lval / rval; break;
 			default: assert(0);
 		}
-		stack_push(v_stack, result);
-		return R_OK;
+		if (stack_push(v_stack, result) == R_MEMORY_ALLOC) {
+			return R_MEMORY_ALLOC;
+		}
+		else {
+			return R_OK;
+		}
 	}
 	else {
 		return R_NOT_ENOUGH_VALUES;
@@ -152,6 +156,10 @@ enum retcode pn_eval_str(int *result, char *expr)
 {
 	struct stack *v_stack = stack_new(MAX_TOKENS);
 	char *walk = expr + strlen(expr) - 1;
+
+	if (v_stack == NULL) {
+		return R_MEMORY_ALLOC;
+	}
 
 	// Start at end of expression and skip to beginning of last token
 	while (walk > expr && isspace(*walk))
@@ -167,17 +175,25 @@ enum retcode pn_eval_str(int *result, char *expr)
 		if (ret == R_OK) {
 			switch (token.type) {
 				case VALUE:
-					stack_push(v_stack, token.value);
+					if (stack_push(v_stack, token.value) == R_MEMORY_ALLOC) {
+						stack_free(v_stack);
+						return R_MEMORY_ALLOC;
+					}
 					break;
 
 				case OP_ADD:
 				case OP_SUB:
 				case OP_MULT:
 				case OP_DIV:
-					if (pn_eval_binary_op(v_stack, token.type) ==
-						R_NOT_ENOUGH_VALUES) {
+				{
+					enum retcode ret = pn_eval_binary_op(v_stack, token.type);
+					if (ret == R_NOT_ENOUGH_VALUES) {
 						return R_INVALID_EXPRESSION;
 					}
+					else if (ret == R_MEMORY_ALLOC) {
+						return R_MEMORY_ALLOC;
+					}
+				}
 					break;
 
 				default:
@@ -235,8 +251,11 @@ int prompt_loop()
 				else if (ret == R_INVALID_EXPRESSION) {
 					fprintf(stderr, "Invalid expression\n");
 				}
-				else if (ret == R_UKNOWN_TOKEN){
+				else if (ret == R_UKNOWN_TOKEN) {
 					fprintf(stderr, "Uknown token\n");
+				}
+				else if (ret == R_MEMORY_ALLOC) {
+					fprintf(stderr, "Memory allocation failed\n");
 				}
 				else {
 					assert(0);
@@ -279,6 +298,10 @@ int main(int argc, char **argv)
 		}
 		else if (ret == R_UKNOWN_TOKEN) {
 			fputs("Uknown token\n", stderr);
+			return EXIT_FAILURE;
+		}
+		else if (ret == R_MEMORY_ALLOC) {
+			fputs("Memory allocation failed\n", stderr);
 			return EXIT_FAILURE;
 		}
 	}
