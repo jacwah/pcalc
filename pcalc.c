@@ -12,6 +12,7 @@
 #include <string.h>
 #include <assert.h>
 #include <limits.h>
+#include <errno.h>
 #include "pcalc.h"
 #include "stack.h"
 
@@ -79,56 +80,86 @@ int ipow(int base, int exp)
 	return result;
 }
 
-// str is a null terminated string of only digits
-// does not handle overflow!!!
-int parse_int(char *str)
+// str is a null terminated string accepted by strtol
+enum retcode parse_int(int *result, char *str)
 {
-	int value = 0;
+	char *endp;
+	long value;
 
-	for (int exp = strlen(str) - 1; *str != '\0'; str++, exp--)
-	{
-		value += ipow(10, exp) * (*str - '0');
+	value = strtol(str, &endp, 0);
+
+	if (errno == ERANGE || value > INT_MAX || value < INT_MIN) {
+		return R_OUT_OF_BOUNDS;
 	}
-
-	return value;
+	else if (*endp != '\0') {
+		return R_UKNOWN_TOKEN;
+	}
+	else {
+		*result = (int)value;
+		return R_OK;
+	}
 }
 
-// Read the first token in expr. Token parameter must be allocated memory.
+// Read the token pointed to by expr. Token parameter must be allocated memory.
 enum retcode pn_read_token(struct token *token, char *expr)
 {
+#define IS_DELIM(c) (isspace(c) || (c) == '\0')
+
 	char *head = expr;
 
-	switch (*head) {
-		case '+': token->type = OP_ADD; head++; break;
-		case '-': token->type = OP_SUB; head++; break;
-		case '*': token->type = OP_MULT; head++; break;
-		case '/': token->type = OP_DIV; head++; break;
-		default:
-			if (isdigit(*head)) {
-				const int buf_size = 16;
-				char buf[buf_size];
+	if (head[0] == '+' && IS_DELIM(head[1])) {
+		token->type = OP_ADD;
+		head++;
+	}
+	else if (head[0] == '-' && IS_DELIM(head[1])) {
+		token->type = OP_SUB;
+		head++;
+	}
+	else if (head[0] == '*' && IS_DELIM(head[1])) {
+		token->type = OP_MULT;
+		head++;
+	}
+	else if (head[0] == '/' && IS_DELIM(head[1])) {
+		token->type = OP_DIV;
+		head++;
+	}
+	else if (isdigit(head[0]) || head[0] == '+' || head[0] == '-') {
+		const int buf_size = 16;
+		char buf[buf_size];
+		int result;
+		enum retcode ret;
 
-				// buf will always be zero terminated
-				memset(buf, 0, sizeof(buf));
+		// buf will always be zero terminated
+		memset(buf, 0, sizeof(buf));
 
-				for (int i = 0; i + 1 < buf_size && isdigit(*head); i++) {
-					buf[i] = *head++;
-				}
+		for (int i = 0; i + 1 < buf_size && !IS_DELIM(*head); i++) {
+			buf[i] = *head++;
+		}
 
-				token->type = VALUE;
-				token->value = parse_int(buf);
-			}
-			else {
-				return R_UKNOWN_TOKEN;
-			}
+		ret = parse_int(&result, buf);
+		if (ret == R_OUT_OF_BOUNDS) {
+			return R_OUT_OF_BOUNDS;
+		}
+		else if (ret == R_UKNOWN_TOKEN) {
+			return R_UKNOWN_TOKEN;
+		}
+		else {
+			token->type = VALUE;
+			token->value = result;
+		}
+	}
+	else {
+		return R_UKNOWN_TOKEN;
 	}
 
-	if (isspace(*head) || *head == '\0') {
+	if (IS_DELIM(*head)) {
 		return R_OK;
 	}
 	else {
 		return R_UKNOWN_TOKEN;
 	}
+
+#undef IS_DELIM
 }
 
 enum retcode pn_eval_binary_op(struct stack *v_stack, enum token_type type)
@@ -247,6 +278,9 @@ enum retcode pn_eval_str(int *result, char *expr)
 		}
 		else if (ret == R_UKNOWN_TOKEN){
 			return R_UKNOWN_TOKEN;
+		}
+		else if (ret == R_OUT_OF_BOUNDS) {
+			return R_OUT_OF_BOUNDS;
 		}
 
 		walk--;
