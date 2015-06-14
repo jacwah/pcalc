@@ -100,6 +100,19 @@ enum retcode parse_int(int *result, char *str)
 	}
 }
 
+const char *retcode_str(enum retcode ret)
+{
+	switch(ret) {
+		case R_OK:					return "No errors occurred";
+		case R_MEMORY_ALLOC:		return "Memory allocation failed";
+		case R_OUT_OF_BOUNDS:		return "Value out of bounds";
+		case R_NOT_ENOUGH_VALUES:	return "Not enough values";
+		case R_UKNOWN_TOKEN:		return "Uknown token";
+		case R_INVALID_EXPRESSION:	return "Invalid expression";
+		default: assert(0);
+	}
+}
+
 // Read the token pointed to by expr. Token parameter must be allocated memory.
 enum retcode pn_read_token(struct token *token, char *expr)
 {
@@ -327,20 +340,8 @@ int prompt_loop()
 				if (ret == R_OK) {
 					printf("%d\n", result);
 				}
-				else if (ret == R_INVALID_EXPRESSION) {
-					fprintf(stderr, "Invalid expression\n");
-				}
-				else if (ret == R_UKNOWN_TOKEN) {
-					fprintf(stderr, "Uknown token\n");
-				}
-				else if (ret == R_MEMORY_ALLOC) {
-					fprintf(stderr, "Memory allocation failed\n");
-				}
-				else if (ret == R_OUT_OF_BOUNDS) {
-					fprintf(stderr, "Result out of bounds\n");
-				}
 				else {
-					assert(0);
+					fprintf(stderr, "%s\n", retcode_str(ret));
 				}
 			}
 		}
@@ -374,20 +375,8 @@ int main(int argc, char **argv)
 			printf("Expression value: %d\n", result);
 			return EXIT_SUCCESS;
 		}
-		else if (ret == R_INVALID_EXPRESSION) {
-			fputs("Invalid expression\n", stderr);
-			return EXIT_FAILURE;
-		}
-		else if (ret == R_UKNOWN_TOKEN) {
-			fputs("Uknown token\n", stderr);
-			return EXIT_FAILURE;
-		}
-		else if (ret == R_MEMORY_ALLOC) {
-			fputs("Memory allocation failed\n", stderr);
-			return EXIT_FAILURE;
-		}
-		else if (ret == R_OUT_OF_BOUNDS) {
-			fprintf(stderr, "Result out of bounds\n");
+		else {
+			fprintf(stderr, "%s\n", retcode_str(ret));
 			return EXIT_FAILURE;
 		}
 	}
