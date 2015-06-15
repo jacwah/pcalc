@@ -65,21 +65,6 @@ int is_undefined_div(int a, int b)
 	return b == 0 || (a == INT_MIN && b == -1);
 }
 
-// Only positive exponents
-int ipow(int base, int exp)
-{
-	int result = 1;
-	while (exp)
-	{
-		if (exp & 1)
-			result *= base;
-		exp >>= 1;
-		base *= base;
-	}
-
-	return result;
-}
-
 // str is a null terminated string accepted by strtol
 enum retcode parse_int(int *result, char *str)
 {
