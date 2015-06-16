@@ -122,15 +122,15 @@ enum retcode pn_read_token(struct token *token, char *expr)
 		head++;
 	}
 	else if (isdigit(head[0]) || head[0] == '+' || head[0] == '-') {
-		const int buf_size = 16;
-		char buf[buf_size];
+		enum { STRLEN_INT_MIN = 11 };
+		char buf[STRLEN_INT_MIN];
 		int result;
 		enum retcode ret;
 
 		// buf will always be zero terminated
 		memset(buf, 0, sizeof(buf));
 
-		for (int i = 0; i + 1 < buf_size && !IS_DELIM(*head); i++) {
+		for (int i = 0; i + 1 < sizeof(buf) && !IS_DELIM(*head); i++) {
 			buf[i] = *head++;
 		}
 
@@ -142,9 +142,9 @@ enum retcode pn_read_token(struct token *token, char *expr)
 			return R_UKNOWN_TOKEN;
 		}
 		else {
-			token->type = VALUE;
 			token->value = result;
 		}
+		token->type = VALUE;
 	}
 	else {
 		return R_UKNOWN_TOKEN;
@@ -152,6 +152,9 @@ enum retcode pn_read_token(struct token *token, char *expr)
 
 	if (IS_DELIM(*head)) {
 		return R_OK;
+	}
+	else if (token->type == VALUE && isdigit(*head)) {
+		return R_OUT_OF_BOUNDS;
 	}
 	else {
 		return R_UKNOWN_TOKEN;
