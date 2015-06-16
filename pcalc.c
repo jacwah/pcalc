@@ -62,7 +62,11 @@ int is_undefined_mult(int a, int b)
 
 int is_undefined_div(int a, int b)
 {
-	return b == 0 || (a == INT_MIN && b == -1);
+# if INT_MIN < -INT_MAX
+	if (a == INT_MIN && b == -1)
+		return 1;
+#endif
+	return b == 0;
 }
 
 // str is a null terminated string accepted by strtol
