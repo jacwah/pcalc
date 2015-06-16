@@ -3,7 +3,7 @@
 
 TARGET=pcalc
 CC=gcc
-CFLAGS=-g -Wall
+override CFLAGS:=-g -Wall $(CFLAGS)
 DEPS=pcalc.h stack.h
 OBJ=pcalc.o stack.o
 
