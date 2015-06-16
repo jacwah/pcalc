@@ -21,12 +21,12 @@
 int is_undefined_add(int a, int b)
 {
 	return (a > 0 && b > INT_MAX - a) ||
-		   (a < 0 && b < INT_MAX - a);
+		   (a < 0 && b < INT_MIN - a);
 }
 
 int is_undefined_sub(int a, int b)
 {
-	return (b > 0 && a < INT_MAX + b) ||
+	return (b > 0 && a < INT_MIN + b) ||
 		   (b < 0 && a > INT_MAX + b);
 }
 
