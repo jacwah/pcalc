@@ -17,6 +17,7 @@
 #include "stack.h"
 
 #define MIN_STACK_SIZE 16
+#define REVERSED 1
 
 int is_undefined_add(int a, int b)
 {
@@ -103,7 +104,7 @@ const char *retcode_str(enum retcode ret)
 }
 
 // Read the token pointed to by expr. Token parameter must be allocated memory.
-enum retcode pn_read_token(struct token *token, char *expr)
+enum retcode read_token(struct token *token, char *expr, char **endp)
 {
 #define IS_DELIM(c) (isspace(c) || (c) == '\0')
 
@@ -152,6 +153,9 @@ enum retcode pn_read_token(struct token *token, char *expr)
 		return R_UKNOWN_TOKEN;
 	}
 
+	if (endp)
+		*endp = head;
+
 	if (IS_DELIM(*head))
 		return R_OK;
 	else if (token->type == VALUE && isdigit(*head))
@@ -162,12 +166,19 @@ enum retcode pn_read_token(struct token *token, char *expr)
 #undef IS_DELIM
 }
 
-enum retcode pn_eval_binary_op(struct stack *v_stack, enum token_type type)
+enum retcode pn_eval_binary_op(struct stack *v_stack, enum token_type type,
+							   int is_reversed)
 {
 	if (stack_size(v_stack) >= 2) {
 		int lval = stack_pop(v_stack);
 		int rval = stack_pop(v_stack);
 		int result = 0;
+
+		if (is_reversed) {
+			int cpy = rval;
+			rval = lval;
+			lval = cpy;
+		}
 
 		switch (type) {
 			case OP_ADD:
@@ -213,25 +224,38 @@ enum retcode pn_eval_binary_op(struct stack *v_stack, enum token_type type)
 }
 
 // Parse and evaluate a string Polish Notation expression
-enum retcode pn_eval_str(int *result, char *expr)
+enum retcode pn_eval_str(int *result, char *expr, int is_reversed)
 {
 	struct stack *v_stack = stack_new(MIN_STACK_SIZE);
-	char *walk = expr + strlen(expr) - 1;
+	char *walk = NULL;
 
 	if (v_stack == NULL) {
 		return R_MEMORY_ALLOC;
 	}
 
-	// Start at end of expression and skip to beginning of last token
-	while (walk > expr && isspace(*walk))
-		walk--;
-	while (walk > expr && !isspace(*(walk - 1)))
-		walk--;
+	if (is_reversed) {
+		walk = expr;
+		while (isspace(*walk))
+			walk++;
+	}
+	else {
+		walk = expr + strlen(expr) - 1;
+		// Skip to beginning of last token
+		while (walk > expr && isspace(*walk))
+			walk--;
+		while (walk > expr && !isspace(*(walk - 1)))
+			walk--;
+	}
 
-	while (walk >= expr) {
+	while (!is_reversed && walk >= expr
+		||  is_reversed && *walk != '\0') {
 		struct token token;
+		enum retcode ret;
 
-		enum retcode ret = pn_read_token(&token, walk);
+		if (is_reversed)
+			ret = read_token(&token, walk, &walk);
+		else
+			ret = read_token(&token, walk, NULL);
 
 		if (ret == R_OK) {
 			switch (token.type) {
@@ -247,7 +271,8 @@ enum retcode pn_eval_str(int *result, char *expr)
 				case OP_MULT:
 				case OP_DIV:
 				{
-					enum retcode ret = pn_eval_binary_op(v_stack, token.type);
+					enum retcode ret = pn_eval_binary_op(v_stack, token.type,
+														 is_reversed);
 
 					if (ret == R_NOT_ENOUGH_VALUES)
 						return R_INVALID_EXPRESSION;
@@ -271,14 +296,21 @@ enum retcode pn_eval_str(int *result, char *expr)
 			return R_OUT_OF_BOUNDS;
 		}
 
-		walk--;
-		while (walk > expr && isspace(*walk))
+		if (is_reversed) {
+			walk++;
+			while (isspace(*walk))
+				walk++;
+		}
+		else {
 			walk--;
-		while (walk > expr && !isspace(*(walk - 1)))
-			walk--;
+			while (walk > expr && isspace(*walk))
+				walk--;
+			while (walk > expr && !isspace(*(walk - 1)))
+				walk--;
 
-		if (walk == expr && isspace(*walk))
-			break;
+			if (walk == expr && isspace(*walk))
+				break;
+		}
 	}
 
 	if (stack_size(v_stack) == 1) {
@@ -308,7 +340,7 @@ int prompt_loop()
 			}
 			else {
 				int result;
-				enum retcode ret = pn_eval_str(&result, expr);
+				enum retcode ret = pn_eval_str(&result, expr, 0);
 
 				if (ret == R_OK) {
 					printf("%d\n", result);
@@ -342,7 +374,7 @@ int main(int argc, char **argv)
 		puts(str);
 
 		int result = 0;
-		enum retcode ret = pn_eval_str(&result, str);
+		enum retcode ret = pn_eval_str(&result, str, REVERSED);
 
 		if (ret == R_OK) {
 			printf("Expression value: %d\n", result);
