@@ -126,8 +126,7 @@ enum retcode pn_read_token(struct token *token, char *expr)
 		head++;
 	}
 	else if (isdigit(head[0]) || head[0] == '+' || head[0] == '-') {
-		enum { STRLEN_INT_MIN = 11 };
-		char buf[STRLEN_INT_MIN];
+		char buf[32];
 		int result;
 		enum retcode ret;
 
