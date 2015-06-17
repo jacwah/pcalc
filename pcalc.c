@@ -138,30 +138,26 @@ enum retcode pn_read_token(struct token *token, char *expr)
 		}
 
 		ret = parse_int(&result, buf);
-		if (ret == R_OUT_OF_BOUNDS) {
+
+		if (ret == R_OUT_OF_BOUNDS)
 			return R_OUT_OF_BOUNDS;
-		}
-		else if (ret == R_UKNOWN_TOKEN) {
+		else if (ret == R_UKNOWN_TOKEN)
 			return R_UKNOWN_TOKEN;
-		}
-		else {
+		else
 			token->value = result;
-		}
+
 		token->type = VALUE;
 	}
 	else {
 		return R_UKNOWN_TOKEN;
 	}
 
-	if (IS_DELIM(*head)) {
+	if (IS_DELIM(*head))
 		return R_OK;
-	}
-	else if (token->type == VALUE && isdigit(*head)) {
+	else if (token->type == VALUE && isdigit(*head))
 		return R_OUT_OF_BOUNDS;
-	}
-	else {
+	else
 		return R_UKNOWN_TOKEN;
-	}
 
 #undef IS_DELIM
 }
@@ -175,50 +171,41 @@ enum retcode pn_eval_binary_op(struct stack *v_stack, enum token_type type)
 
 		switch (type) {
 			case OP_ADD:
-				if (is_undefined_add(lval, rval)) {
+				if (is_undefined_add(lval, rval))
 					return R_OUT_OF_BOUNDS;
-				}
-				else {
+				else
 					result = lval + rval;
-				}
 				break;
 
 			case OP_SUB:
-				if (is_undefined_sub(lval, rval)) {
+				if (is_undefined_sub(lval, rval))
 					return R_OUT_OF_BOUNDS;
-				}
-				else {
+				else
 					result = lval - rval;
-				}
 				break;
 
 			case OP_MULT:
-				if (is_undefined_mult(lval, rval)) {
+				if (is_undefined_mult(lval, rval))
 					return R_OUT_OF_BOUNDS;
-				}
-				else {
+				else
 					result = lval * rval;
-				}
 				break;
 
 			case OP_DIV:
-				if (is_undefined_div(lval, rval)) {
+				if (is_undefined_div(lval, rval))
 					return R_OUT_OF_BOUNDS;
-				}
-				else {
+				else
 					result = lval / rval;
-				}
 				break;
 
-			default: assert(0);
+			default:
+				assert(0);
 		}
 
-		if (stack_push(v_stack, result) == R_MEMORY_ALLOC) {
+		if (stack_push(v_stack, result) == R_MEMORY_ALLOC)
 			return R_MEMORY_ALLOC;
-		}
-		else {
+		else
 			return R_OK;
-		}
 	}
 	else {
 		return R_NOT_ENOUGH_VALUES;
@@ -261,18 +248,15 @@ enum retcode pn_eval_str(int *result, char *expr)
 				case OP_DIV:
 				{
 					enum retcode ret = pn_eval_binary_op(v_stack, token.type);
-					if (ret == R_NOT_ENOUGH_VALUES) {
+
+					if (ret == R_NOT_ENOUGH_VALUES)
 						return R_INVALID_EXPRESSION;
-					}
-					else if (ret == R_MEMORY_ALLOC) {
+					else if (ret == R_MEMORY_ALLOC)
 						return R_MEMORY_ALLOC;
-					}
-					else if (ret == R_OUT_OF_BOUNDS) {
+					else if (ret == R_OUT_OF_BOUNDS)
 						return R_OUT_OF_BOUNDS;
-					}
-					else if (ret != R_OK){
+					else if (ret != R_OK)
 						assert(0);
-					}
 				}
 					break;
 
@@ -304,8 +288,6 @@ enum retcode pn_eval_str(int *result, char *expr)
 	else {
 		return R_INVALID_EXPRESSION;
 	}
-
-	return R_OK;
 }
 
 int prompt_loop()
