@@ -9,6 +9,8 @@
 #ifndef PCALC_H
 #define PCALC_H
 
+#define PCALC_REVERSED 1
+
 enum retcode {
 	R_OK,
 	R_MEMORY_ALLOC,
@@ -18,19 +20,6 @@ enum retcode {
 	R_INVALID_EXPRESSION
 };
 
-enum token_type {
-	NONE,
-	VALUE,
-	OP_ADD,
-	OP_SUB,
-	OP_MULT,
-	OP_DIV
-};
-
-// value will only be defined if type is VALUE
-struct token {
-	enum token_type type;
-	int value;
-};
+enum retcode pn_eval_str(int *result, char *expr, int is_reversed);
 
 #endif

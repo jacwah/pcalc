@@ -17,7 +17,21 @@
 #include "stack.h"
 
 #define MIN_STACK_SIZE 16
-#define REVERSED 1
+
+enum token_type {
+	NONE,
+	VALUE,
+	OP_ADD,
+	OP_SUB,
+	OP_MULT,
+	OP_DIV
+};
+
+// value will only be defined if type is VALUE
+struct token {
+	enum token_type type;
+	int value;
+};
 
 int is_undefined_add(int a, int b)
 {
@@ -87,19 +101,6 @@ enum retcode parse_int(int *result, char *str)
 	else {
 		*result = (int)value;
 		return R_OK;
-	}
-}
-
-const char *retcode_str(enum retcode ret)
-{
-	switch(ret) {
-		case R_OK:					return "No errors occurred";
-		case R_MEMORY_ALLOC:		return "Memory allocation failed";
-		case R_OUT_OF_BOUNDS:		return "Value out of bounds";
-		case R_NOT_ENOUGH_VALUES:	return "Not enough values";
-		case R_UKNOWN_TOKEN:		return "Uknown token";
-		case R_INVALID_EXPRESSION:	return "Invalid expression";
-		default: assert(0);
 	}
 }
 
@@ -319,70 +320,5 @@ enum retcode pn_eval_str(int *result, char *expr, int is_reversed)
 	}
 	else {
 		return R_INVALID_EXPRESSION;
-	}
-}
-
-int prompt_loop()
-{
-	fprintf(stderr, "Type 'q' or 'quit' to exit\n");
-	for (;;) {
-		char *expr;
-		size_t len;
-
-		printf("pcalc> ");
-
-		if (getline(&expr, &len, stdin) > 0) {
-			if (expr[0] == '\n') {
-				continue;
-			}
-			else if (strcmp(expr, "q\n") == 0 || strcmp(expr, "quit\n") == 0) {
-				return EXIT_SUCCESS;
-			}
-			else {
-				int result;
-				enum retcode ret = pn_eval_str(&result, expr, 0);
-
-				if (ret == R_OK) {
-					printf("%d\n", result);
-				}
-				else {
-					fprintf(stderr, "%s\n", retcode_str(ret));
-				}
-			}
-		}
-		else {
-			perror("Reading input failed");
-			return EXIT_FAILURE;
-		}
-	}
-}
-
-int main(int argc, char **argv)
-{
-	if (argc == 1) {
-		return prompt_loop();
-	}
-	else {
-		char str[1024];
-
-		str[0] = '\0';
-		for (int i = 1; i < argc; i++) {
-			strcat(str, argv[i]);
-			strcat(str, " ");
-		}
-
-		puts(str);
-
-		int result = 0;
-		enum retcode ret = pn_eval_str(&result, str, REVERSED);
-
-		if (ret == R_OK) {
-			printf("Expression value: %d\n", result);
-			return EXIT_SUCCESS;
-		}
-		else {
-			fprintf(stderr, "%s\n", retcode_str(ret));
-			return EXIT_FAILURE;
-		}
 	}
 }

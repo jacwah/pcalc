@@ -5,7 +5,7 @@ TARGET=pcalc
 CC=gcc
 override CFLAGS:=-g -Wall -Wpedantic -Wno-logical-op-parentheses $(CFLAGS)
 DEPS=pcalc.h stack.h
-OBJ=pcalc.o stack.o
+OBJ=pcalc.o stack.o main.o
 
 .PHONY: default all clean
 
