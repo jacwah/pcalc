@@ -3,7 +3,7 @@
 
 TARGET=pcalc
 CC=gcc
-override CFLAGS:=-g -Wall -Wpedantic $(CFLAGS)
+override CFLAGS:=-g -Wall -Wpedantic -Wno-logical-op-parentheses $(CFLAGS)
 DEPS=pcalc.h stack.h
 OBJ=pcalc.o stack.o
 
