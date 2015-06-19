@@ -21,6 +21,7 @@ const char *retcode_str(enum retcode ret)
 		case R_NOT_ENOUGH_VALUES:	return "Not enough values";
 		case R_UKNOWN_TOKEN:		return "Uknown token";
 		case R_INVALID_EXPRESSION:	return "Invalid expression";
+		case R_NO_LAST_ANS:			return "No previous answer";
 		default: assert(0);
 	}
 }
@@ -51,6 +52,9 @@ void print_error(char *expr, char *errp, enum retcode ret)
 
 int prompt_loop()
 {
+	int result;
+	int *last_ans = NULL;
+
 	fprintf(stderr, "Type 'q' or 'quit' to exit\n");
 	for (;;) {
 		char *expr;
@@ -66,12 +70,13 @@ int prompt_loop()
 				return EXIT_SUCCESS;
 			}
 			else {
-				int result;
 				char *errp;
-				enum retcode ret = pn_eval_str(&result, &errp, expr, 0);
+				enum retcode ret = pn_eval_str(&result, &errp, expr,
+											   0, last_ans);
 
 				if (ret == R_OK) {
 					printf("%d\n", result);
+					last_ans = &result;
 				}
 				else {
 					print_error(expr, errp, ret);
@@ -101,7 +106,8 @@ int main(int argc, char **argv)
 
 		int result = 0;
 		char *errp;
-		enum retcode ret = pn_eval_str(&result, &errp, str, PCALC_REVERSED);
+		enum retcode ret = pn_eval_str(&result, &errp, str,
+									   PCALC_REVERSED, NULL);
 
 		if (ret == R_OK) {
 			printf("%d\n", result);

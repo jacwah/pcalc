@@ -105,7 +105,8 @@ enum retcode parse_int(int *result, char *str)
 }
 
 // Read the token pointed to by expr. Token parameter must be allocated memory.
-enum retcode read_token(struct token *token, char *expr, char **endp)
+enum retcode read_token(struct token *token, char *expr,
+						char **endp, int *last_ans)
 {
 #define IS_DELIM(c) (isspace(c) || (c) == '\0')
 
@@ -126,6 +127,16 @@ enum retcode read_token(struct token *token, char *expr, char **endp)
 	else if (head[0] == '/' && IS_DELIM(head[1])) {
 		token->type = OP_DIV;
 		head++;
+	}
+	else if (strncmp(head, "ans", strlen("ans")) == 0) {
+		if (last_ans) {
+			token->value = *last_ans;
+			token->type = VALUE;
+			head += strlen("ans");
+		}
+		else {
+			return R_NO_LAST_ANS;
+		}
 	}
 	else if (isdigit(head[0]) || head[0] == '+' || head[0] == '-') {
 		char buf[32];
@@ -226,7 +237,8 @@ enum retcode pn_eval_binary_op(struct stack *v_stack, enum token_type type,
 
 // Parse and evaluate a string Polish Notation expression
 // If an error occurs, *errp will point to the offending part of exrp
-enum retcode pn_eval_str(int *result, char **errp, char *expr, int is_reversed)
+enum retcode pn_eval_str(int *result, char **errp, char *expr,
+						 int is_reversed, int *last_ans)
 {
 	struct stack *v_stack = stack_new(MIN_STACK_SIZE);
 
@@ -254,9 +266,9 @@ enum retcode pn_eval_str(int *result, char **errp, char *expr, int is_reversed)
 		enum retcode ret;
 
 		if (is_reversed)
-			ret = read_token(&token, *errp, errp);
+			ret = read_token(&token, *errp, errp, last_ans);
 		else
-			ret = read_token(&token, *errp, NULL);
+			ret = read_token(&token, *errp, NULL, last_ans);
 
 		if (ret == R_OK) {
 			switch (token.type) {
@@ -290,11 +302,14 @@ enum retcode pn_eval_str(int *result, char **errp, char *expr, int is_reversed)
 					assert(0);
 			}
 		}
-		else if (ret == R_UKNOWN_TOKEN){
-			return R_UKNOWN_TOKEN;
-		}
-		else if (ret == R_OUT_OF_BOUNDS) {
-			return R_OUT_OF_BOUNDS;
+
+		switch (ret) {
+			case R_UKNOWN_TOKEN:	return R_UKNOWN_TOKEN;
+			case R_OUT_OF_BOUNDS:	return R_OUT_OF_BOUNDS;
+			case R_NO_LAST_ANS:		return R_NO_LAST_ANS;
+			case R_OK:				break;
+
+			default:   assert(0);
 		}
 
 		if (is_reversed) {
