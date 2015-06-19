@@ -25,6 +25,30 @@ const char *retcode_str(enum retcode ret)
 	}
 }
 
+void print_error(char *expr, char *errp, enum retcode ret)
+{
+	if (expr && errp) {
+		assert (errp >= expr);
+
+		if (expr[strlen(expr) - 1] == '\n')
+			expr[strlen(expr) - 1] = '\0';
+
+		fprintf(stderr,
+				"Error: %s\n"
+				"\t%s\n"
+				"\t",
+				retcode_str(ret), expr);
+
+		for (size_t i = 0; i < errp - expr; i++)
+			fputc(' ', stderr);
+
+		fprintf(stderr, "^\n");
+	}
+	else {
+		fprintf(stderr, "Error: %s\n", retcode_str(ret));
+	}
+}
+
 int prompt_loop()
 {
 	fprintf(stderr, "Type 'q' or 'quit' to exit\n");
@@ -43,13 +67,14 @@ int prompt_loop()
 			}
 			else {
 				int result;
-				enum retcode ret = pn_eval_str(&result, expr, 0);
+				char *errp;
+				enum retcode ret = pn_eval_str(&result, &errp, expr, 0);
 
 				if (ret == R_OK) {
 					printf("%d\n", result);
 				}
 				else {
-					fprintf(stderr, "error: %s\n", retcode_str(ret));
+					print_error(expr, errp, ret);
 				}
 			}
 		}
@@ -75,14 +100,15 @@ int main(int argc, char **argv)
 		}
 
 		int result = 0;
-		enum retcode ret = pn_eval_str(&result, str, PCALC_REVERSED);
+		char *errp;
+		enum retcode ret = pn_eval_str(&result, &errp, str, PCALC_REVERSED);
 
 		if (ret == R_OK) {
 			printf("%d\n", result);
 			return EXIT_SUCCESS;
 		}
 		else {
-			fprintf(stderr, "error: %s\n", retcode_str(ret));
+			print_error(str, errp, ret);
 			return EXIT_FAILURE;
 		}
 	}

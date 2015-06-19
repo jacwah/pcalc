@@ -225,38 +225,38 @@ enum retcode pn_eval_binary_op(struct stack *v_stack, enum token_type type,
 }
 
 // Parse and evaluate a string Polish Notation expression
-enum retcode pn_eval_str(int *result, char *expr, int is_reversed)
+// If an error occurs, *errp will point to the offending part of exrp
+enum retcode pn_eval_str(int *result, char **errp, char *expr, int is_reversed)
 {
 	struct stack *v_stack = stack_new(MIN_STACK_SIZE);
-	char *walk = NULL;
 
 	if (v_stack == NULL) {
 		return R_MEMORY_ALLOC;
 	}
 
 	if (is_reversed) {
-		walk = expr;
-		while (isspace(*walk))
-			walk++;
+		*errp = expr;
+		while (isspace(**errp))
+			*errp += 1;
 	}
 	else {
-		walk = expr + strlen(expr) - 1;
+		*errp = expr + strlen(expr) - 1;
 		// Skip to beginning of last token
-		while (walk > expr && isspace(*walk))
-			walk--;
-		while (walk > expr && !isspace(*(walk - 1)))
-			walk--;
+		while (*errp > expr && isspace(**errp))
+			*errp -= 1;
+		while (*errp > expr && !isspace((*errp)[-1]))
+			*errp -= 1;
 	}
 
-	while (!is_reversed && walk >= expr
-		||  is_reversed && *walk != '\0') {
+	while (!is_reversed && *errp >= expr
+		||  is_reversed && **errp != '\0') {
 		struct token token;
 		enum retcode ret;
 
 		if (is_reversed)
-			ret = read_token(&token, walk, &walk);
+			ret = read_token(&token, *errp, errp);
 		else
-			ret = read_token(&token, walk, NULL);
+			ret = read_token(&token, *errp, NULL);
 
 		if (ret == R_OK) {
 			switch (token.type) {
@@ -298,18 +298,18 @@ enum retcode pn_eval_str(int *result, char *expr, int is_reversed)
 		}
 
 		if (is_reversed) {
-			walk++;
-			while (isspace(*walk))
-				walk++;
+			*errp += 1;
+			while (isspace(**errp))
+				*errp += 1;
 		}
 		else {
-			walk--;
-			while (walk > expr && isspace(*walk))
-				walk--;
-			while (walk > expr && !isspace(*(walk - 1)))
-				walk--;
+			*errp -= 1;
+			while (*errp > expr && isspace(**errp))
+				*errp -= 1;
+			while (*errp > expr && !isspace((*errp)[-1]))
+				*errp -= 1;
 
-			if (walk == expr && isspace(*walk))
+			if (*errp == expr && isspace(**errp))
 				break;
 		}
 	}

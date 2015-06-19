@@ -20,6 +20,6 @@ enum retcode {
 	R_INVALID_EXPRESSION
 };
 
-enum retcode pn_eval_str(int *result, char *expr, int is_reversed);
+enum retcode pn_eval_str(int *result, char **errp, char *expr, int is_reversed);
 
 #endif
