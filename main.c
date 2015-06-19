@@ -67,6 +67,7 @@ int prompt_loop()
 				continue;
 			}
 			else if (strcmp(expr, "q\n") == 0 || strcmp(expr, "quit\n") == 0) {
+				free(expr);
 				return EXIT_SUCCESS;
 			}
 			else {
@@ -84,6 +85,7 @@ int prompt_loop()
 			}
 		}
 		else {
+			free(expr);
 			perror("Reading input failed");
 			return EXIT_FAILURE;
 		}

@@ -287,14 +287,10 @@ enum retcode pn_eval_str(int *result, char **errp, char *expr,
 					enum retcode ret = pn_eval_binary_op(v_stack, token.type,
 														 is_reversed);
 
-					if (ret == R_NOT_ENOUGH_VALUES)
-						return R_INVALID_EXPRESSION;
-					else if (ret == R_MEMORY_ALLOC)
-						return R_MEMORY_ALLOC;
-					else if (ret == R_OUT_OF_BOUNDS)
-						return R_OUT_OF_BOUNDS;
-					else if (ret != R_OK)
-						assert(0);
+					if (ret != R_OK) {
+						stack_free(v_stack);
+						return ret;
+					}
 				}
 					break;
 
@@ -302,14 +298,16 @@ enum retcode pn_eval_str(int *result, char **errp, char *expr,
 					assert(0);
 			}
 		}
+		else {
+			stack_free(v_stack);
 
-		switch (ret) {
-			case R_UKNOWN_TOKEN:	return R_UKNOWN_TOKEN;
-			case R_OUT_OF_BOUNDS:	return R_OUT_OF_BOUNDS;
-			case R_NO_LAST_ANS:		return R_NO_LAST_ANS;
-			case R_OK:				break;
+			switch (ret) {
+				case R_UKNOWN_TOKEN:	return R_UKNOWN_TOKEN;
+				case R_OUT_OF_BOUNDS:	return R_OUT_OF_BOUNDS;
+				case R_NO_LAST_ANS:		return R_NO_LAST_ANS;
 
-			default:   assert(0);
+				default:   assert(0);
+			}
 		}
 
 		if (is_reversed) {
@@ -331,9 +329,11 @@ enum retcode pn_eval_str(int *result, char **errp, char *expr,
 
 	if (stack_size(v_stack) == 1) {
 		*result = stack_pop(v_stack);
+		stack_free(v_stack);
 		return R_OK;
 	}
 	else {
+		stack_free(v_stack);
 		return R_INVALID_EXPRESSION;
 	}
 }
