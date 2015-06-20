@@ -72,8 +72,8 @@ int prompt_loop()
 			}
 			else {
 				char *errp;
-				enum retcode ret = pn_eval_str(&result, &errp, expr,
-											   0, last_ans);
+				enum retcode ret = inf_eval_str(&result, &errp, expr,
+											    last_ans);
 
 				if (ret == R_OK) {
 					printf("%d\n", result);

@@ -104,6 +104,28 @@ enum retcode parse_int(int *result, char *str)
 	}
 }
 
+int op_cmp(enum token_type op1, enum token_type op2)
+{
+	switch (op1) {
+		case OP_ADD:
+		case OP_SUB:
+			if (op2 == OP_ADD || op2 == OP_SUB)
+				return 0;
+			else
+				return -1;
+
+		case OP_MULT:
+		case OP_DIV:
+			if (op2 == OP_ADD || op2 == OP_SUB)
+				return 1;
+			else
+				return 0;
+
+		default:
+			assert(0);
+	}
+}
+
 // Read the token pointed to by expr. Token parameter must be allocated memory.
 enum retcode read_token(struct token *token, char *expr,
 						char **endp, int *last_ans)
@@ -336,4 +358,150 @@ enum retcode pn_eval_str(int *result, char **errp, char *expr,
 		stack_free(v_stack);
 		return R_INVALID_EXPRESSION;
 	}
+}
+
+enum retcode inf_eval_outq(int *result, struct token *outq, size_t len)
+{
+	struct stack *v_stack = stack_new(MIN_STACK_SIZE);
+
+	if (v_stack == NULL) {
+		return R_MEMORY_ALLOC;
+	}
+
+	for (size_t i = 0; i < len; i++) {
+		struct token *tokp = outq + i;
+
+		switch (tokp->type) {
+			case VALUE:
+				if (stack_push(v_stack, tokp->value) == R_MEMORY_ALLOC) {
+					stack_free(v_stack);
+					return R_MEMORY_ALLOC;
+				}
+				break;
+
+			case OP_ADD:
+			case OP_SUB:
+			case OP_MULT:
+			case OP_DIV:
+			{
+				enum retcode ret = pn_eval_binary_op(v_stack, tokp->type,
+													 PCALC_REVERSED);
+
+				if (ret != R_OK) {
+					stack_free(v_stack);
+					return ret;
+				}
+				break;
+			}
+
+			default:
+				assert(0);
+		}
+	}
+
+	if (stack_size(v_stack) == 1) {
+		*result = stack_pop(v_stack);
+		stack_free(v_stack);
+		return R_OK;
+	}
+	else {
+		stack_free(v_stack);
+		return R_INVALID_EXPRESSION;
+	}
+}
+
+// Shunting yard algorithm
+enum retcode inf_eval_str(int *result, char **errp, char *expr, int *last_ans)
+{
+	struct stack *op_stack = stack_new(MIN_STACK_SIZE);
+	size_t outq_size = sizeof(struct token) * MIN_STACK_SIZE;
+	size_t outq_len = 0;
+	struct token *outq = malloc(outq_size);
+	enum retcode ret;
+
+	if (op_stack == NULL || outq == NULL)
+		return R_MEMORY_ALLOC;
+
+	*errp = expr;
+
+	while (isspace(**errp))
+		*errp += 1;
+
+	while (**errp != '\0') {
+		struct token token;
+		enum retcode ret = read_token(&token, *errp, errp, last_ans);
+
+		if (ret == R_OK) {
+			switch (token.type) {
+				case VALUE:
+					if (outq_len == outq_size) {
+						outq_size *= 2;
+						outq = realloc(outq, outq_size);
+					}
+
+					memcpy(outq + outq_len++, &token, sizeof(struct token));
+					break;
+
+				case OP_ADD:
+				case OP_SUB:
+				case OP_MULT:
+				case OP_DIV:
+					while (stack_size(op_stack) > 0) {
+						enum token_type op2 = stack_peek(op_stack);
+
+						if (op_cmp(token.type, op2) <= 0) {
+							stack_pop(op_stack);
+
+							if (outq_len == outq_size) {
+								outq_size *= 2;
+								outq = realloc(outq, outq_size);
+							}
+
+							outq[outq_len++].type = op2;
+						}
+						else {
+							break;
+						}
+					}
+
+					stack_push(op_stack, token.type);
+					break;
+
+				default:
+					assert(0);
+			}
+
+			*errp += 1;
+			while (isspace(**errp))
+				*errp += 1;
+		}
+		else {
+			stack_free(op_stack);
+
+			switch (ret) {
+				case R_UKNOWN_TOKEN:	return R_UKNOWN_TOKEN;
+				case R_OUT_OF_BOUNDS:	return R_OUT_OF_BOUNDS;
+				case R_NO_LAST_ANS:		return R_NO_LAST_ANS;
+
+				default:   assert(0);
+			}
+		}
+	}
+
+	while (stack_size(op_stack) > 0) {
+		enum token_type op = stack_pop(op_stack);
+
+		if (outq_len == outq_size) {
+			outq_size *= 2;
+			outq = realloc(outq, outq_size);
+		}
+
+		outq[outq_len++].type = op;
+	}
+
+	stack_free(op_stack);
+	ret = inf_eval_outq(result, outq, outq_len);
+	free(outq);
+
+	return ret;
 }
