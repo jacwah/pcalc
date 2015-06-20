@@ -22,6 +22,7 @@ struct stack *stack_new(size_t size);
 void stack_free(struct stack *stack);
 enum retcode stack_push(struct stack *stack, int value);
 int stack_pop(struct stack *stack);
+int stack_peek(struct stack *stack);
 int stack_is_empty(struct stack *stack);
 int stack_is_full(struct stack *stack);
 int stack_size(struct stack *stack);

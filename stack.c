@@ -68,6 +68,13 @@ int stack_pop(struct stack *stack)
 	return value;
 }
 
+int stack_peek(struct stack *stack)
+{
+	assert(stack->top != 0);
+
+	return stack->array[stack->top - 1];
+}
+
 int stack_is_empty(struct stack *stack)
 {
 	return stack->top == 0;
