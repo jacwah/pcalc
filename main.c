@@ -108,8 +108,7 @@ int main(int argc, char **argv)
 
 		int result = 0;
 		char *errp;
-		enum retcode ret = pn_eval_str(&result, &errp, str,
-									   PCALC_REVERSED, NULL);
+		enum retcode ret = inf_eval_str(&result, &errp, str, NULL);
 
 		if (ret == R_OK) {
 			printf("%d\n", result);

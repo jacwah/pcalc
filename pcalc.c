@@ -6,15 +6,16 @@
 //
 //
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
 #include <assert.h>
 #include <limits.h>
 #include <errno.h>
+
 #include "pcalc.h"
 #include "stack.h"
+#include "d_array.h"
 
 #define MIN_STACK_SIZE 16
 
@@ -360,20 +361,20 @@ enum retcode pn_eval_str(int *result, char **errp, char *expr,
 	}
 }
 
-enum retcode inf_eval_outq(int *result, struct token *outq, size_t len)
+enum retcode inf_eval_outq(int *result, d_array *outq)
 {
 	struct stack *v_stack = stack_new(MIN_STACK_SIZE);
+	struct token *array = da_get_array(outq);
+	size_t elem_num = da_get_size(outq);
 
 	if (v_stack == NULL) {
 		return R_MEMORY_ALLOC;
 	}
 
-	for (size_t i = 0; i < len; i++) {
-		struct token *tokp = outq + i;
-
-		switch (tokp->type) {
+	for (size_t i = 0; i < elem_num; i++) {
+		switch (array[i].type) {
 			case VALUE:
-				if (stack_push(v_stack, tokp->value) == R_MEMORY_ALLOC) {
+				if (stack_push(v_stack, array[i].value) == R_MEMORY_ALLOC) {
 					stack_free(v_stack);
 					return R_MEMORY_ALLOC;
 				}
@@ -384,7 +385,7 @@ enum retcode inf_eval_outq(int *result, struct token *outq, size_t len)
 			case OP_MULT:
 			case OP_DIV:
 			{
-				enum retcode ret = pn_eval_binary_op(v_stack, tokp->type,
+				enum retcode ret = pn_eval_binary_op(v_stack, array[i].type,
 													 PCALC_REVERSED);
 
 				if (ret != R_OK) {
@@ -414,10 +415,7 @@ enum retcode inf_eval_outq(int *result, struct token *outq, size_t len)
 enum retcode inf_eval_str(int *result, char **errp, char *expr, int *last_ans)
 {
 	struct stack *op_stack = stack_new(MIN_STACK_SIZE);
-	size_t outq_size = sizeof(struct token) * MIN_STACK_SIZE;
-	size_t outq_len = 0;
-	struct token *outq = malloc(outq_size);
-	enum retcode ret;
+	d_array *outq = da_new(sizeof(struct token), MIN_STACK_SIZE);
 
 	if (op_stack == NULL || outq == NULL)
 		return R_MEMORY_ALLOC;
@@ -434,12 +432,7 @@ enum retcode inf_eval_str(int *result, char **errp, char *expr, int *last_ans)
 		if (ret == R_OK) {
 			switch (token.type) {
 				case VALUE:
-					if (outq_len == outq_size) {
-						outq_size *= 2;
-						outq = realloc(outq, outq_size);
-					}
-
-					memcpy(outq + outq_len++, &token, sizeof(struct token));
+					da_append(outq, &token);
 					break;
 
 				case OP_ADD:
@@ -450,14 +443,10 @@ enum retcode inf_eval_str(int *result, char **errp, char *expr, int *last_ans)
 						enum token_type op2 = stack_peek(op_stack);
 
 						if (op_cmp(token.type, op2) <= 0) {
-							stack_pop(op_stack);
+							struct token token;
 
-							if (outq_len == outq_size) {
-								outq_size *= 2;
-								outq = realloc(outq, outq_size);
-							}
-
-							outq[outq_len++].type = op2;
+							token.type = stack_pop(op_stack);
+							da_append(outq, &token);
 						}
 						else {
 							break;
@@ -477,6 +466,7 @@ enum retcode inf_eval_str(int *result, char **errp, char *expr, int *last_ans)
 		}
 		else {
 			stack_free(op_stack);
+			da_free(&outq);
 
 			switch (ret) {
 				case R_UKNOWN_TOKEN:	return R_UKNOWN_TOKEN;
@@ -489,19 +479,17 @@ enum retcode inf_eval_str(int *result, char **errp, char *expr, int *last_ans)
 	}
 
 	while (stack_size(op_stack) > 0) {
-		enum token_type op = stack_pop(op_stack);
+		struct token token;
 
-		if (outq_len == outq_size) {
-			outq_size *= 2;
-			outq = realloc(outq, outq_size);
-		}
-
-		outq[outq_len++].type = op;
+		token.type = stack_pop(op_stack);
+		da_append(outq, &token);
 	}
 
 	stack_free(op_stack);
-	ret = inf_eval_outq(result, outq, outq_len);
-	free(outq);
 
-	return ret;
+	{
+		enum retcode ret = inf_eval_outq(result, outq);
+		da_free(&outq);
+		return ret;
+	}
 }
