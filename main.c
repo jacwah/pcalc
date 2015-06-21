@@ -12,6 +12,11 @@
 #include <string.h>
 #include "pcalc.h"
 
+int getopt(int, char * const[], const char *);
+extern int optind;
+
+enum notation { PREFIX, POSTFIX, INFIX };
+
 const char *retcode_str(enum retcode ret)
 {
 	switch(ret) {
@@ -50,17 +55,78 @@ void print_error(char *expr, char *errp, enum retcode ret)
 	}
 }
 
-int prompt_loop()
+void usage()
 {
+	printf("usage: pcalc [-rpi]\n"
+		   "       pcalc [-rpi] <expression>\n"
+		   "\n"
+		   "    -r        postfix notation (rpn)\n"
+		   "    -p        prefix notation\n"
+		   "    -i        infix notation (default)\n"
+		   );
+	exit(EXIT_FAILURE);
+}
+
+void parse_argv(int *argcp, char ***argvp, enum notation *notation)
+{
+	const char *optstr =
+		"r"		// postfix (rpn)
+		"p"		// prefix (pn)
+		"i";	// infix
+	int c;
+
+	while ((c = getopt(*argcp, *argvp, optstr)) != -1)
+		switch (c) {
+			case 'r':
+				*notation = POSTFIX;
+				break;
+
+			case 'p':
+				*notation = PREFIX;
+				break;
+
+			case 'i':
+				*notation = INFIX;
+				break;
+
+			case '?':
+			default:
+				usage();
+		}
+
+	*argcp -= optind - 1;
+	*argvp += optind - 1;
+}
+
+int prompt_loop(enum notation notation)
+{
+	char *prompt = "pcalc>";
 	int result;
 	int *last_ans = NULL;
+
+	switch (notation) {
+		case PREFIX:
+			prompt = "pcalc[p]";
+			break;
+
+		case POSTFIX:
+			prompt = "pcalc[r]";
+			break;
+
+		case INFIX:
+			prompt = "pcalc[i]";
+			break;
+
+		default:
+			assert(0);
+	}
 
 	fprintf(stderr, "Type 'q' or 'quit' to exit\n");
 	for (;;) {
 		char *expr = NULL;
 		size_t len = 0;
 
-		printf("pcalc> ");
+		printf("%s> ", prompt);
 
 		if (getline(&expr, &len, stdin) > 0) {
 			if (expr[0] == '\n') {
@@ -72,8 +138,25 @@ int prompt_loop()
 			}
 			else {
 				char *errp;
-				enum retcode ret = inf_eval_str(&result, &errp, expr,
-											    last_ans);
+				enum retcode ret;
+
+				switch (notation) {
+					case PREFIX:
+						ret = pn_eval_str(&result, &errp, expr, 0, last_ans);
+						break;
+
+					case POSTFIX:
+						ret = pn_eval_str(&result, &errp, expr,
+										  PCALC_REVERSED, last_ans);
+						break;
+
+					case INFIX:
+						ret = inf_eval_str(&result, &errp, expr, last_ans);
+						break;
+						
+					default:
+						assert(0);
+				}
 
 				if (ret == R_OK) {
 					printf("%d\n", result);
@@ -94,8 +177,12 @@ int prompt_loop()
 
 int main(int argc, char **argv)
 {
+	enum notation notation = INFIX;
+
+	parse_argv(&argc, &argv, &notation);
+
 	if (argc == 1) {
-		return prompt_loop();
+		return prompt_loop(notation);
 	}
 	else {
 		char str[1024];
@@ -108,7 +195,25 @@ int main(int argc, char **argv)
 
 		int result = 0;
 		char *errp;
-		enum retcode ret = inf_eval_str(&result, &errp, str, NULL);
+		enum retcode ret;
+
+		switch (notation) {
+			case PREFIX:
+				ret = pn_eval_str(&result, &errp, str, 0, NULL);
+				break;
+
+			case POSTFIX:
+				ret = pn_eval_str(&result, &errp, str,
+								  PCALC_REVERSED, NULL);
+				break;
+
+			case INFIX:
+				ret = inf_eval_str(&result, &errp, str, NULL);
+				break;
+
+			default:
+				assert(0);
+		}
 
 		if (ret == R_OK) {
 			printf("%d\n", result);
