@@ -57,8 +57,8 @@ int prompt_loop()
 
 	fprintf(stderr, "Type 'q' or 'quit' to exit\n");
 	for (;;) {
-		char *expr;
-		size_t len;
+		char *expr = NULL;
+		size_t len = 0;
 
 		printf("pcalc> ");
 
