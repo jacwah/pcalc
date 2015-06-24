@@ -6,11 +6,14 @@
 //
 //
 
+#include "pcalc_prefix.h"
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
 #include <string.h>
 #include <unistd.h>
+
 #include "pcalc.h"
 
 enum notation { PREFIX, POSTFIX, INFIX };

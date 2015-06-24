@@ -3,8 +3,8 @@
 
 TARGET=pcalc
 CC=gcc
-override CFLAGS:=-g -Wall -Wpedantic -Wno-logical-op-parentheses $(CFLAGS)
-DEPS=pcalc.h stack.h
+override CFLAGS:=-g --std=c99 -Wall -Wpedantic -Wno-parentheses $(CFLAGS)
+DEPS=pcalc.h stack.h pcalc_prefix.h
 OBJ=pcalc.o stack.o main.o d_array.o
 
 .PHONY: default all clean
@@ -22,3 +22,4 @@ clean:
 	-rm -f *.o
 	-rm -f $(TARGET)
 	-rm -rf $(TARGET).dSYM
+
