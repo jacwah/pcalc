@@ -50,11 +50,11 @@ enum retcode stack_push(struct stack *stack, int value)
 							   stack->size * sizeof(*stack->array));
 
 		if (stack->array == NULL) {
-			return R_MEMORY_ALLOC;
+			return PCALC_MEMORY_ALLOC;
 		}
 	}
 	stack->array[stack->top++] = value;
-	return R_OK;
+	return PCALC_OK;
 }
 
 // Can only call if stack is not empty

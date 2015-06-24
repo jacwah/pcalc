@@ -94,14 +94,14 @@ enum retcode parse_int(int *result, char *str)
 	value = strtol(str, &endp, 0);
 
 	if (errno == ERANGE || value > INT_MAX || value < INT_MIN) {
-		return R_OUT_OF_BOUNDS;
+		return PCALC_OUT_OF_BOUNDS;
 	}
 	else if (*endp != '\0') {
-		return R_UKNOWN_TOKEN;
+		return PCALC_UKNOWN_TOKEN;
 	}
 	else {
 		*result = (int)value;
-		return R_OK;
+		return PCALC_OK;
 	}
 }
 
@@ -158,7 +158,7 @@ enum retcode read_token(struct token *token, char *expr,
 			head += strlen("ans");
 		}
 		else {
-			return R_NO_LAST_ANS;
+			return PCALC_NO_LAST_ANS;
 		}
 	}
 	else if (isdigit(head[0]) || head[0] == '+' || head[0] == '-') {
@@ -175,28 +175,28 @@ enum retcode read_token(struct token *token, char *expr,
 
 		ret = parse_int(&result, buf);
 
-		if (ret == R_OUT_OF_BOUNDS)
-			return R_OUT_OF_BOUNDS;
-		else if (ret == R_UKNOWN_TOKEN)
-			return R_UKNOWN_TOKEN;
+		if (ret == PCALC_OUT_OF_BOUNDS)
+			return PCALC_OUT_OF_BOUNDS;
+		else if (ret == PCALC_UKNOWN_TOKEN)
+			return PCALC_UKNOWN_TOKEN;
 		else
 			token->value = result;
 
 		token->type = VALUE;
 	}
 	else {
-		return R_UKNOWN_TOKEN;
+		return PCALC_UKNOWN_TOKEN;
 	}
 
 	if (endp)
 		*endp = head;
 
 	if (IS_DELIM(*head))
-		return R_OK;
+		return PCALC_OK;
 	else if (token->type == VALUE && isdigit(*head))
-		return R_OUT_OF_BOUNDS;
+		return PCALC_OUT_OF_BOUNDS;
 	else
-		return R_UKNOWN_TOKEN;
+		return PCALC_UKNOWN_TOKEN;
 
 #undef IS_DELIM
 }
@@ -218,28 +218,28 @@ enum retcode pn_eval_binary_op(struct stack *v_stack, enum token_type type,
 		switch (type) {
 			case OP_ADD:
 				if (is_undefined_add(lval, rval))
-					return R_OUT_OF_BOUNDS;
+					return PCALC_OUT_OF_BOUNDS;
 				else
 					result = lval + rval;
 				break;
 
 			case OP_SUB:
 				if (is_undefined_sub(lval, rval))
-					return R_OUT_OF_BOUNDS;
+					return PCALC_OUT_OF_BOUNDS;
 				else
 					result = lval - rval;
 				break;
 
 			case OP_MULT:
 				if (is_undefined_mult(lval, rval))
-					return R_OUT_OF_BOUNDS;
+					return PCALC_OUT_OF_BOUNDS;
 				else
 					result = lval * rval;
 				break;
 
 			case OP_DIV:
 				if (is_undefined_div(lval, rval))
-					return R_OUT_OF_BOUNDS;
+					return PCALC_OUT_OF_BOUNDS;
 				else
 					result = lval / rval;
 				break;
@@ -248,13 +248,13 @@ enum retcode pn_eval_binary_op(struct stack *v_stack, enum token_type type,
 				assert(0);
 		}
 
-		if (stack_push(v_stack, result) == R_MEMORY_ALLOC)
-			return R_MEMORY_ALLOC;
+		if (stack_push(v_stack, result) == PCALC_MEMORY_ALLOC)
+			return PCALC_MEMORY_ALLOC;
 		else
-			return R_OK;
+			return PCALC_OK;
 	}
 	else {
-		return R_NOT_ENOUGH_VALUES;
+		return PCALC_NOT_ENOUGH_VALUES;
 	}
 }
 
@@ -266,7 +266,7 @@ enum retcode pn_eval_str(int *result, char **errp, char *expr,
 	struct stack *v_stack = stack_new(MIN_STACK_SIZE);
 
 	if (v_stack == NULL) {
-		return R_MEMORY_ALLOC;
+		return PCALC_MEMORY_ALLOC;
 	}
 
 	if (is_reversed) {
@@ -293,12 +293,13 @@ enum retcode pn_eval_str(int *result, char **errp, char *expr,
 		else
 			ret = read_token(&token, *errp, NULL, last_ans);
 
-		if (ret == R_OK) {
+		if (ret == PCALC_OK) {
 			switch (token.type) {
 				case VALUE:
-					if (stack_push(v_stack, token.value) == R_MEMORY_ALLOC) {
+					if (stack_push(v_stack, token.value) ==
+						PCALC_MEMORY_ALLOC) {
 						stack_free(v_stack);
-						return R_MEMORY_ALLOC;
+						return PCALC_MEMORY_ALLOC;
 					}
 					break;
 
@@ -310,7 +311,7 @@ enum retcode pn_eval_str(int *result, char **errp, char *expr,
 					enum retcode ret = pn_eval_binary_op(v_stack, token.type,
 														 is_reversed);
 
-					if (ret != R_OK) {
+					if (ret != PCALC_OK) {
 						stack_free(v_stack);
 						return ret;
 					}
@@ -325,9 +326,9 @@ enum retcode pn_eval_str(int *result, char **errp, char *expr,
 			stack_free(v_stack);
 
 			switch (ret) {
-				case R_UKNOWN_TOKEN:	return R_UKNOWN_TOKEN;
-				case R_OUT_OF_BOUNDS:	return R_OUT_OF_BOUNDS;
-				case R_NO_LAST_ANS:		return R_NO_LAST_ANS;
+				case PCALC_UKNOWN_TOKEN:	return PCALC_UKNOWN_TOKEN;
+				case PCALC_OUT_OF_BOUNDS:	return PCALC_OUT_OF_BOUNDS;
+				case PCALC_NO_LAST_ANS:		return PCALC_NO_LAST_ANS;
 
 				default:   assert(0);
 			}
@@ -353,11 +354,11 @@ enum retcode pn_eval_str(int *result, char **errp, char *expr,
 	if (stack_size(v_stack) == 1) {
 		*result = stack_pop(v_stack);
 		stack_free(v_stack);
-		return R_OK;
+		return PCALC_OK;
 	}
 	else {
 		stack_free(v_stack);
-		return R_INVALID_EXPRESSION;
+		return PCALC_INVALID_EXPRESSION;
 	}
 }
 
@@ -368,15 +369,15 @@ enum retcode inf_eval_outq(int *result, d_array *outq)
 	size_t elem_num = da_get_size(outq);
 
 	if (v_stack == NULL) {
-		return R_MEMORY_ALLOC;
+		return PCALC_MEMORY_ALLOC;
 	}
 
 	for (size_t i = 0; i < elem_num; i++) {
 		switch (array[i].type) {
 			case VALUE:
-				if (stack_push(v_stack, array[i].value) == R_MEMORY_ALLOC) {
+				if (stack_push(v_stack, array[i].value) == PCALC_MEMORY_ALLOC) {
 					stack_free(v_stack);
-					return R_MEMORY_ALLOC;
+					return PCALC_MEMORY_ALLOC;
 				}
 				break;
 
@@ -388,7 +389,7 @@ enum retcode inf_eval_outq(int *result, d_array *outq)
 				enum retcode ret = pn_eval_binary_op(v_stack, array[i].type,
 													 PCALC_REVERSED);
 
-				if (ret != R_OK) {
+				if (ret != PCALC_OK) {
 					stack_free(v_stack);
 					return ret;
 				}
@@ -403,11 +404,11 @@ enum retcode inf_eval_outq(int *result, d_array *outq)
 	if (stack_size(v_stack) == 1) {
 		*result = stack_pop(v_stack);
 		stack_free(v_stack);
-		return R_OK;
+		return PCALC_OK;
 	}
 	else {
 		stack_free(v_stack);
-		return R_INVALID_EXPRESSION;
+		return PCALC_INVALID_EXPRESSION;
 	}
 }
 
@@ -418,7 +419,7 @@ enum retcode inf_eval_str(int *result, char **errp, char *expr, int *last_ans)
 	d_array *outq = da_new(sizeof(struct token), MIN_STACK_SIZE);
 
 	if (op_stack == NULL || outq == NULL)
-		return R_MEMORY_ALLOC;
+		return PCALC_MEMORY_ALLOC;
 
 	*errp = expr;
 
@@ -429,7 +430,7 @@ enum retcode inf_eval_str(int *result, char **errp, char *expr, int *last_ans)
 		struct token token;
 		enum retcode ret = read_token(&token, *errp, errp, last_ans);
 
-		if (ret == R_OK) {
+		if (ret == PCALC_OK) {
 			switch (token.type) {
 				case VALUE:
 					da_append(outq, &token);
@@ -469,9 +470,9 @@ enum retcode inf_eval_str(int *result, char **errp, char *expr, int *last_ans)
 			da_free(&outq);
 
 			switch (ret) {
-				case R_UKNOWN_TOKEN:	return R_UKNOWN_TOKEN;
-				case R_OUT_OF_BOUNDS:	return R_OUT_OF_BOUNDS;
-				case R_NO_LAST_ANS:		return R_NO_LAST_ANS;
+				case PCALC_UKNOWN_TOKEN:	return PCALC_UKNOWN_TOKEN;
+				case PCALC_OUT_OF_BOUNDS:	return PCALC_OUT_OF_BOUNDS;
+				case PCALC_NO_LAST_ANS:		return PCALC_NO_LAST_ANS;
 
 				default:   assert(0);
 			}

@@ -10,23 +10,21 @@
 #include <stdio.h>
 #include <assert.h>
 #include <string.h>
+#include <unistd.h>
 #include "pcalc.h"
-
-int getopt(int, char * const[], const char *);
-extern int optind;
 
 enum notation { PREFIX, POSTFIX, INFIX };
 
 const char *retcode_str(enum retcode ret)
 {
 	switch(ret) {
-		case R_OK:					return "No errors occurred";
-		case R_MEMORY_ALLOC:		return "Memory allocation failed";
-		case R_OUT_OF_BOUNDS:		return "Value out of bounds";
-		case R_NOT_ENOUGH_VALUES:	return "Not enough values";
-		case R_UKNOWN_TOKEN:		return "Uknown token";
-		case R_INVALID_EXPRESSION:	return "Invalid expression";
-		case R_NO_LAST_ANS:			return "No previous answer";
+		case PCALC_OK:					return "No errors occurred";
+		case PCALC_MEMORY_ALLOC:		return "Memory allocation failed";
+		case PCALC_OUT_OF_BOUNDS:		return "Value out of bounds";
+		case PCALC_NOT_ENOUGH_VALUES:	return "Not enough values";
+		case PCALC_UKNOWN_TOKEN:		return "Uknown token";
+		case PCALC_INVALID_EXPRESSION:	return "Invalid expression";
+		case PCALC_NO_LAST_ANS:			return "No previous answer";
 		default: assert(0);
 	}
 }
@@ -60,9 +58,9 @@ void usage()
 	printf("usage: pcalc [-rpi]\n"
 		   "       pcalc [-rpi] <expression>\n"
 		   "\n"
-		   "    -r        postfix notation (rpn)\n"
-		   "    -p        prefix notation\n"
-		   "    -i        infix notation (default)\n"
+		   "       -i  infix notation (default)\n"
+		   "       -r  postfix notation (rpn)\n"
+		   "       -p  prefix notation\n"
 		   );
 	exit(EXIT_FAILURE);
 }
@@ -158,7 +156,7 @@ int prompt_loop(enum notation notation)
 						assert(0);
 				}
 
-				if (ret == R_OK) {
+				if (ret == PCALC_OK) {
 					printf("%d\n", result);
 					last_ans = &result;
 				}
@@ -215,7 +213,7 @@ int main(int argc, char **argv)
 				assert(0);
 		}
 
-		if (ret == R_OK) {
+		if (ret == PCALC_OK) {
 			printf("%d\n", result);
 			return EXIT_SUCCESS;
 		}
