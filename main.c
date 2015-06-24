@@ -155,9 +155,11 @@ void parse_argv(int *argcp, char ***argvp, struct settings *s)
 
 int prompt_loop(struct settings *s)
 {
-	char *prompt = "pcalc>";
-	int result;
+	char *prompt = NULL;
 	int *last_ans = NULL;
+	char *expr = NULL;
+	size_t len = 0;
+	int result;
 
 	switch (s->notation) {
 		case PREFIX:
@@ -178,9 +180,6 @@ int prompt_loop(struct settings *s)
 
 	fprintf(stderr, "Type 'q' or 'quit' to exit\n");
 	for (;;) {
-		char *expr = NULL;
-		size_t len = 0;
-
 		printf("%s> ", prompt);
 
 		if (getline(&expr, &len, stdin) > 0) {
