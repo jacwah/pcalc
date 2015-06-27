@@ -1,6 +1,6 @@
 //
 //  main.c
-//  
+//
 //
 //  Copyright 2015 Jacob Wahlgren
 //
@@ -55,17 +55,19 @@ void print_error(char *expr, char *errp, enum retcode ret)
 	}
 }
 
-void usage()
+void usage(int exit_value)
 {
-	printf("usage: pcalc [-rpi]\n"
-		   "       pcalc [-rpi] <expression>\n"
+	printf("Usage: pcalc [<option>...]\n"
+		   "       pcalc [<option>...] <expression>\n"
 		   "\n"
 		   "       -i  infix notation (default)\n"
 		   "       -r  postfix notation (rpn)\n"
 		   "       -p  prefix notation\n"
 		   "       -c  print config path and exit\n"
+		   "       -h  show this help\n"
 		   );
-	exit(EXIT_FAILURE);
+
+	exit(exit_value);
 }
 
 void parse_argv(int *argcp, char ***argvp, struct settings *s)
@@ -74,7 +76,9 @@ void parse_argv(int *argcp, char ***argvp, struct settings *s)
 		"r"		// postfix (rpn)
 		"p"		// prefix (pn)
 		"i"		// infix
-		"c";	// print config path
+		"c"		// print config path
+		"h"		// show help
+		;
 	int c;
 
 	while ((c = getopt(*argcp, *argvp, optstr)) != -1)
@@ -101,9 +105,12 @@ void parse_argv(int *argcp, char ***argvp, struct settings *s)
 				exit(EXIT_SUCCESS);
 			}
 
+			case 'h':
+				usage(EXIT_SUCCESS);
+
 			case '?':
 			default:
-				usage();
+				usage(EXIT_FAILURE);
 		}
 
 	*argcp -= optind - 1;
@@ -165,7 +172,7 @@ int prompt_loop(struct settings *s)
 					case INFIX:
 						ret = inf_eval_str(&result, &errp, expr, last_ans);
 						break;
-						
+
 					default:
 						assert(0);
 				}
