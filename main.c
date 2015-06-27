@@ -15,8 +15,7 @@
 #include <unistd.h>
 
 #include "pcalc.h"
-
-enum notation { PREFIX, POSTFIX, INFIX };
+#include "settings.h"
 
 const char *retcode_str(enum retcode ret)
 {
@@ -64,31 +63,43 @@ void usage()
 		   "       -i  infix notation (default)\n"
 		   "       -r  postfix notation (rpn)\n"
 		   "       -p  prefix notation\n"
+		   "       -c  print config path and exit\n"
 		   );
 	exit(EXIT_FAILURE);
 }
 
-void parse_argv(int *argcp, char ***argvp, enum notation *notation)
+void parse_argv(int *argcp, char ***argvp, struct settings *s)
 {
 	const char *optstr =
 		"r"		// postfix (rpn)
 		"p"		// prefix (pn)
-		"i";	// infix
+		"i"		// infix
+		"c";	// print config path
 	int c;
 
 	while ((c = getopt(*argcp, *argvp, optstr)) != -1)
 		switch (c) {
 			case 'r':
-				*notation = POSTFIX;
+				s->notation = POSTFIX;
 				break;
 
 			case 'p':
-				*notation = PREFIX;
+				s->notation = PREFIX;
 				break;
 
 			case 'i':
-				*notation = INFIX;
+				s->notation = INFIX;
 				break;
+
+			case 'c':
+			{
+				char path[PATH_MAX];
+
+				get_config_path(path);
+				printf("%s\n", path);
+
+				exit(EXIT_SUCCESS);
+			}
 
 			case '?':
 			default:
@@ -99,13 +110,13 @@ void parse_argv(int *argcp, char ***argvp, enum notation *notation)
 	*argvp += optind - 1;
 }
 
-int prompt_loop(enum notation notation)
+int prompt_loop(struct settings *s)
 {
 	char *prompt = "pcalc>";
 	int result;
 	int *last_ans = NULL;
 
-	switch (notation) {
+	switch (s->notation) {
 		case PREFIX:
 			prompt = "pcalc[p]";
 			break;
@@ -141,7 +152,7 @@ int prompt_loop(enum notation notation)
 				char *errp;
 				enum retcode ret;
 
-				switch (notation) {
+				switch (s->notation) {
 					case PREFIX:
 						ret = pn_eval_str(&result, &errp, expr, 0, last_ans);
 						break;
@@ -178,12 +189,13 @@ int prompt_loop(enum notation notation)
 
 int main(int argc, char **argv)
 {
-	enum notation notation = INFIX;
+	struct settings settings;
 
-	parse_argv(&argc, &argv, &notation);
+	read_settings(&settings);
+	parse_argv(&argc, &argv, &settings);
 
 	if (argc == 1) {
-		return prompt_loop(notation);
+		return prompt_loop(&settings);
 	}
 	else {
 		char str[1024];
@@ -198,7 +210,7 @@ int main(int argc, char **argv)
 		char *errp;
 		enum retcode ret;
 
-		switch (notation) {
+		switch (settings.notation) {
 			case PREFIX:
 				ret = pn_eval_str(&result, &errp, str, 0, NULL);
 				break;

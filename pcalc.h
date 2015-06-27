@@ -21,6 +21,12 @@ enum retcode {
 	PCALC_NO_LAST_ANS
 };
 
+enum notation {
+	PREFIX,
+	POSTFIX,
+	INFIX
+};
+
 enum retcode pn_eval_str(int *result, char **errp, char *expr,
 						 int is_reversed, int *last_ans);
 enum retcode inf_eval_str(int *result, char **errp, char *expr, int *last_ans);
