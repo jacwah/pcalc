@@ -188,8 +188,15 @@ int prompt_loop(struct settings *s)
 		}
 		else {
 			free(expr);
-			perror("Reading input failed");
-			return EXIT_FAILURE;
+
+			if (feof(stdin)) {
+				putc('\n', stdout);
+				return EXIT_SUCCESS;
+			}
+			else {
+				perror("Reading input failed");
+				return EXIT_FAILURE;
+			}
 		}
 	}
 }
