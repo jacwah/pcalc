@@ -166,14 +166,14 @@ void write_settings(struct settings *s, FILE *stream)
 	char *output_str = "";
 
 	switch (s->notation) {
-		case INFIX:   not_str = "infix";
-		case PREFIX:  not_str = "prefix";
-		case POSTFIX: not_str = "postfix";
+		case INFIX:   not_str = "infix";	break;
+		case PREFIX:  not_str = "prefix";	break;
+		case POSTFIX: not_str = "postfix";	break;
 	}
 
 	switch (s->output) {
-		case BASE_DECIMAL:	output_str = "decimal";
-		case BASE_HEX:		output_str = "hex";
+		case BASE_DECIMAL:	output_str = "decimal";	break;
+		case BASE_HEX:		output_str = "hex";		break;
 	}
 
 	fprintf(stream, "notation %s\n"
