@@ -36,7 +36,7 @@ char *get_config_path(char path[PATH_MAX])
 		*path = '\0';
 	}
 
-	strncat(path, ".pcalc", PATH_MAX - strlen(path));
+	strncat(path, PCALC_CONFIG, PATH_MAX - strlen(path));
 
 	return path;
 }

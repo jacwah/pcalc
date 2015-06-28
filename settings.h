@@ -11,6 +11,8 @@
 
 #include "pcalc.h"
 
+#define PCALC_CONFIG ".pcalc-rc"
+
 enum notation {
 	PREFIX,
 	POSTFIX,
