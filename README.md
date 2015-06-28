@@ -49,11 +49,11 @@ $ pcalc -r 3 2 -
 
 Run with -h to see full option reference.
 
-`pcalc -h`
+`$ pcalc -h`
 
 ## Contact
 
 Pcalc is developed by Jacob Wahlgren and licensed under the MIT License. See
-LICESE more information.
+LICENSE more information.
 
-You can reach me at jacob.wahlgen at gmail.
+You can reach me at jacob.wahlgren on gmail.
