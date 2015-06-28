@@ -64,6 +64,7 @@ void usage(int exit_value)
 		   "       -r  postfix notation (rpn)\n"
 		   "       -p  prefix notation\n"
 		   "       -c  print config path and exit\n"
+		   "       -w  print settings and exit\n"
 		   "       -h  show this help\n"
 		   );
 
@@ -77,6 +78,7 @@ void parse_argv(int *argcp, char ***argvp, struct settings *s)
 		"p"		// prefix (pn)
 		"i"		// infix
 		"c"		// print config path
+		"w"		// print settings
 		"h"		// show help
 		;
 	int c;
@@ -104,6 +106,11 @@ void parse_argv(int *argcp, char ***argvp, struct settings *s)
 
 				exit(EXIT_SUCCESS);
 			}
+
+			case 'w':
+				write_settings(s, stdout);
+
+				exit(EXIT_SUCCESS);
 
 			case 'h':
 				usage(EXIT_SUCCESS);

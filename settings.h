@@ -16,6 +16,7 @@ struct settings {
 };
 
 void read_settings(struct settings *settings);
+void write_settings(struct settings *s, FILE *stream);
 char *get_config_path(char path[PATH_MAX]);
 
 #endif

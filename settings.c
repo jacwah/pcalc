@@ -138,7 +138,6 @@ void write_settings(struct settings *s, FILE *stream)
 		case POSTFIX: not_str = "postfix";
 	}
 
-	fprintf(stream, "# Pcalc settings\n"
-					"notation %s\n",
+	fprintf(stream, "notation %s\n",
 					not_str);
 }
