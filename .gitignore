@@ -1,6 +1,6 @@
 pcalc
+tags
 *.o
 .DS_Store
 .project
 *~
-
