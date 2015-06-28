@@ -13,6 +13,7 @@
 #include <assert.h>
 #include <string.h>
 #include <unistd.h>
+#include <limits.h>
 
 #include "pcalc.h"
 #include "settings.h"
@@ -52,6 +53,34 @@ void print_error(char *expr, char *errp, enum retcode ret)
 	}
 	else {
 		fprintf(stderr, "Error: %s\n", retcode_str(ret));
+	}
+}
+
+void print_number(struct settings *s, int n)
+{
+	switch (s->output) {
+		case BASE_DECIMAL:
+			printf("%d", n);
+			break;
+
+		case BASE_HEX:
+			if (n == INT_MIN) {
+				print_error(NULL, NULL, PCALC_OUT_OF_BOUNDS);
+			}
+			else {
+				printf("0x");
+
+				if (n < 0) {
+					putchar('-');
+					n *= -1;
+				}
+
+				printf("%X\n", n);
+			}
+			break;
+
+		default:
+			assert(0);
 	}
 }
 
@@ -185,7 +214,7 @@ int prompt_loop(struct settings *s)
 				}
 
 				if (ret == PCALC_OK) {
-					printf("%d\n", result);
+					print_number(s, result);
 					last_ans = &result;
 				}
 				else {
@@ -250,7 +279,7 @@ int main(int argc, char **argv)
 		}
 
 		if (ret == PCALC_OK) {
-			printf("%d\n", result);
+			print_number(&settings, result);
 			return EXIT_SUCCESS;
 		}
 		else {

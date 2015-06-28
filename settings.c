@@ -44,46 +44,78 @@ char *get_config_path(char path[PATH_MAX])
 void settings_default(struct settings *s)
 {
 	s->notation = INFIX;
+	s->output = BASE_DECIMAL;
+}
+
+enum retcode read_notation(struct settings *s, char *arg)
+{
+	if (sstrcmp(arg, "infix") == 0)
+		s->notation = INFIX;
+	else if (sstrcmp(arg, "postfix") == 0)
+		s->notation = POSTFIX;
+	else if (sstrcmp(arg, "prefix") == 0)
+		s->notation = PREFIX;
+	else
+		return PCALC_INVALID_EXPRESSION;
+
+	return PCALC_OK;
+}
+
+enum retcode read_output(struct settings *s, char *arg)
+{
+	if (sstrcmp(arg, "decimal") == 0)
+		s->output = BASE_DECIMAL;
+	else if (sstrcmp(arg, "hex") == 0)
+		s->output = BASE_HEX;
+	else
+		return PCALC_INVALID_EXPRESSION;
+
+	return PCALC_OK;
 }
 
 enum retcode parse_line(struct settings *s, char *line)
 {
+	struct read_cmd {
+		char *cmd;
+		enum retcode (*func)(struct settings *s, char *arg);
+	};
+	struct read_cmd cmds[] = {
+		{"notation", read_notation},
+		{"output", read_output}
+	};
 	int error = 0;
-
-	if (*line == '#')
-		return PCALC_OK;
+	size_t i;
 
 	while (isspace(*line))
 		line++;
 
-	if (*line == '\0')
+	if (*line == '#' || *line == '\0')
 		return PCALC_OK;
 
-	if (strncmp(line, "notation", strlen("notation")) == 0) {
-		line += strlen("notation");
+	for (i = 0; i < sizeof(cmds) / sizeof(cmds[0]); i++) {
+		char *cmd = cmds[i].cmd;
+		size_t len = strlen(cmd);
 
-		if (isspace(*line++)) {
-			while (isspace(*line))
-				line++;
+		if (strncmp(line, cmd, len) == 0) {
+			line += len;
 
-			if (*line == '\n')
-				;
-			else if (sstrcmp(line, "infix") == 0)
-				s->notation = INFIX;
-			else if (sstrcmp(line, "postfix") == 0)
-				s->notation = POSTFIX;
-			else if (sstrcmp(line, "prefix") == 0)
-				s->notation = PREFIX;
-			else
+			if (isspace (*line++)) {
+				while (isspace(*line))
+					line++;
+
+				if ((cmds[i].func)(s, line) != PCALC_OK)
+					error = 1;
+			}
+			else {
 				error = 1;
-		}
-		else {
-			error = 1;
+			}
+
+			break;
 		}
 	}
-	else {
-		error = 1;
-	}
+
+	if (i == sizeof(cmds) / sizeof(cmds[0]))
+		error = 1;	// No match
 
 	if (error)
 		return PCALC_INVALID_EXPRESSION;
@@ -131,6 +163,7 @@ void read_settings(struct settings *s)
 void write_settings(struct settings *s, FILE *stream)
 {
 	char *not_str = "";
+	char *output_str = "";
 
 	switch (s->notation) {
 		case INFIX:   not_str = "infix";
@@ -138,6 +171,12 @@ void write_settings(struct settings *s, FILE *stream)
 		case POSTFIX: not_str = "postfix";
 	}
 
-	fprintf(stream, "notation %s\n",
-					not_str);
+	switch (s->output) {
+		case BASE_DECIMAL:	output_str = "decimal";
+		case BASE_HEX:		output_str = "hex";
+	}
+
+	fprintf(stream, "notation %s\n"
+					"output %s\n",
+					not_str, output_str);
 }

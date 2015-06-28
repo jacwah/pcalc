@@ -11,8 +11,20 @@
 
 #include "pcalc.h"
 
+enum notation {
+	PREFIX,
+	POSTFIX,
+	INFIX
+};
+
+enum base {
+	BASE_DECIMAL,
+	BASE_HEX
+};
+
 struct settings {
 	enum notation notation;
+	enum base output;
 };
 
 void read_settings(struct settings *settings);

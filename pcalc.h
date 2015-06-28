@@ -1,6 +1,6 @@
 //
 //  pcalc.h
-//  
+//
 //
 //  Copyright 2015 Jacob Wahlgren
 //
@@ -19,12 +19,6 @@ enum retcode {
 	PCALC_UKNOWN_TOKEN,
 	PCALC_INVALID_EXPRESSION,
 	PCALC_NO_LAST_ANS
-};
-
-enum notation {
-	PREFIX,
-	POSTFIX,
-	INFIX
 };
 
 enum retcode pn_eval_str(int *result, char **errp, char *expr,
